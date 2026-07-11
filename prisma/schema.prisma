@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────
+
+enum Role {
+  admin
+  user
+}
+
+enum StatusKontrak {
+  aktif
+  tidak_aktif
+  dalam_pemeliharaan
+  dipindahkan
+  dihentikan
+}
+
+// ─────────────────────────────────────────
+// Tables
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  password  String
+  role      Role     @default(user)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  atm                 Atm[]
+  monitoringAktivitas MonitoringAktivitas[]
+
+  @@map("users")
+}
+
+model Atm {
+  id          String   @id @default(cuid())
+  userId      String   @map("id_user")
+  kodeAtm     String   @map("kode_atm")
+  kodeAtmLama String?  @map("kode_atm_lama")
+  lokasi      String
+  jenisMesin  String   @map("jenis_mesin")
+  branch      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User  @relation(fields: [userId], references: [id])
+  pks  Pks[]
+
+  @@map("atm")
+}
+
+model Pks {
+  id         String   @id @default(cuid())
+  atmId      String   @map("id_atm")
+  nomorPks   String   @map("nomor_pks")
+  tanggalPks DateTime @map("tanggal_pks")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  atm  Atm   @relation(fields: [atmId], references: [id])
+  sewa Sewa?
+
+  @@map("pks")
+}
+
+model Sewa {
+  id          String   @id @default(cuid())
+  pksId       String   @unique @map("id_pks")
+  nilaiSewa   Decimal  @map("nilai_sewa") @db.Decimal(15, 2)
+  tglMulai    DateTime @map("tgl_mulai")
+  tglBerakhir DateTime @map("tgl_berakhir")
+  keterangan  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // masa_sewa → computed: tgl_berakhir − tgl_mulai (tidak disimpan di DB)
+
+  pks               Pks                @relation(fields: [pksId], references: [id])
+  monitoringKontrak MonitoringKontrak?
+
+  @@map("sewa")
+}
+
+model MonitoringKontrak {
+  id        String        @id @default(cuid())
+  sewaId    String        @unique @map("id_sewa")
+  status    StatusKontrak @default(aktif)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  // sisa_hari → computed real-time: tgl_berakhir − today() (tidak disimpan di DB)
+
+  sewa Sewa @relation(fields: [sewaId], references: [id])
+
+  @@map("monitoring_kontrak")
+}
+
+model MonitoringAktivitas {
+  id          String   @id @default(cuid())
+  userId      String   @map("id_user")
+  modul       String
+  aksi        String
+  dataSebelum Json?    @map("data_sebelum")
+  dataSetelah Json?    @map("data_setelah")
+  tanggal     DateTime @default(now())
+  status      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("monitoring_aktivitas")
+}
