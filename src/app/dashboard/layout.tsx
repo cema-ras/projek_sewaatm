@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   // Jika tidak terotentikasi, alihkan ke halaman login
   if (!user) {
-    redirect('/login')
+    redirect('/auth/login')
   }
 
   return (
