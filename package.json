@@ -11,7 +11,7 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/client": "^7.9.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.2",
     "class-variance-authority": "^0.7.1",
@@ -22,7 +22,6 @@
     "postcss": "^8.5.22",
     "prettier": "^3.9.5",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.13.0",
@@ -37,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prisma": "^7.9.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5"
   }

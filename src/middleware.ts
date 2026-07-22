@@ -38,11 +38,11 @@ export async function middleware(request: NextRequest) {
 
   // Belum login → redirect ke /login
   if (!user && pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   // Sudah login → tidak perlu ke /login
-  if (user && pathname === '/login') {
+  if (user && pathname === '/auth/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -53,5 +53,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/auth/login'],
 }
