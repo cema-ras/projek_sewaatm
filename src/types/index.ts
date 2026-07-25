@@ -31,7 +31,8 @@ export interface Atm {
   kodeAtmLama?: string | null
   lokasi: string
   jenisMesin: string
-  branch: string
+  cabangPengelola?: string; 
+  branch: boolean | string
   createdAt: Date
   updatedAt: Date
   user?: User
