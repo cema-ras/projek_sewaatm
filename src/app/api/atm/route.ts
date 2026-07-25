@@ -27,7 +27,10 @@ export async function GET(request: Request) {
               { kodeAtmLama: { contains: search, mode: 'insensitive' } },
               { lokasi: { contains: search, mode: 'insensitive' } },
               { jenisMesin: { contains: search, mode: 'insensitive' } },
-              { branch: { contains: search, mode: 'insensitive' } },
+              { cabangPengelola: { contains: search, mode: 'insensitive' } },
+              
+              // HAPUS { branch: { contains: search } } 
+              // Karena branch sekarang Boolean, fungsi contains() akan membuat Prisma error.
             ],
           }
         : {},
@@ -58,13 +61,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, branch } = body
+    
+    // 1. TAMBAHKAN cabangPengelola di sini
+    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, cabangPengelola, branch } = body
 
-    if (!kodeAtm || !lokasi || !jenisMesin || !branch) {
+    // 2. PERBAIKI validasi boolean. Jangan gunakan !branch, tapi cek apakah undefined
+    if (!kodeAtm || !lokasi || !jenisMesin || !cabangPengelola || branch === undefined) {
       return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
     }
 
-    // Buat data ATM baru
+    // 3. Masukkan cabangPengelola ke data Prisma
     const newAtm = await prisma.atm.create({
       data: {
         userId: user.id,
@@ -72,7 +78,11 @@ export async function POST(request: Request) {
         kodeAtmLama: kodeAtmLama || null,
         lokasi,
         jenisMesin,
-        branch,
+        cabangPengelola, // Field baru ditambahkan
+        
+        // PENTING: Jika di schema.prisma field 'branch' masih bertipe String,
+        // ubah kode di bawah ini menjadi -> branch: String(branch)
+        branch, 
       },
     })
 

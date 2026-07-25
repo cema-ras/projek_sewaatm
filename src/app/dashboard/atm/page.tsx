@@ -5,33 +5,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { 
-  Building2, 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Loader2, 
-  X,
-  AlertTriangle
-} from 'lucide-react'
+import { Building2, Search, Plus, Edit2, Trash2, Loader2, X, AlertTriangle } from 'lucide-react'
 import { Atm } from '@/types'
 
 export default function AtmPage() {
@@ -39,19 +39,20 @@ export default function AtmPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Form/Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [selectedAtmId, setSelectedAtmId] = useState<string | null>(null)
-  
+
   const [kodeAtm, setKodeAtm] = useState('')
   const [kodeAtmLama, setKodeAtmLama] = useState('')
   const [lokasi, setLokasi] = useState('')
-  const [jenisMesin, setJenisMesin] = useState('')
-  const [branch, setBranch] = useState('')
+  const [jenisMesin, setJenisMesin] = useState<string[]>([])
+  const [cabangPengelola, setCabangPengelola] = useState('')
+  const [branch, setBranch] = useState(false)
   const [saving, setSaving] = useState(false)
-  
+
   // Delete Confirmation states
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [atmToDelete, setAtmToDelete] = useState<Atm | null>(null)
@@ -62,7 +63,9 @@ export default function AtmPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/atm${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`)
+      const res = await fetch(
+        `/api/atm${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`
+      )
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setAtms(json.data || [])
@@ -90,8 +93,9 @@ export default function AtmPage() {
     setKodeAtm('')
     setKodeAtmLama('')
     setLokasi('')
-    setJenisMesin('')
-    setBranch('')
+    setJenisMesin([])
+    setCabangPengelola('')
+    setBranch(false)
     setIsModalOpen(true)
   }
 
@@ -101,36 +105,51 @@ export default function AtmPage() {
     setKodeAtm(atm.kodeAtm)
     setKodeAtmLama(atm.kodeAtmLama || '')
     setLokasi(atm.lokasi)
-    setJenisMesin(atm.jenisMesin)
-    setBranch(atm.branch)
+
+    // Parsing string "ATM, CRM" kembali menjadi array ['ATM', 'CRM']
+    setJenisMesin(atm.jenisMesin ? atm.jenisMesin.split(', ') : [])
+    setCabangPengelola(atm.cabangPengelola || '')
+
+    // Memastikan nilai toggle branch sesuai (konversi ke boolean jika dari backend berupa string)
+    setBranch(atm.branch === true || atm.branch === 'true')
+
     setIsModalOpen(true)
+  }
+
+  const handleJenisMesinChange = (checked: boolean, value: string) => {
+    if (checked) {
+      setJenisMesin([...jenisMesin, value])
+    } else {
+      setJenisMesin(jenisMesin.filter((item) => item !== value))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    
+
     const payload = {
       kodeAtm,
       kodeAtmLama: kodeAtmLama || null,
       lokasi,
-      jenisMesin,
-      branch
+      jenisMesin: jenisMesin.join(', '), // Format ke string agar mudah disimpan
+      cabangPengelola,
+      branch,
     }
 
     try {
       const url = modalMode === 'add' ? '/api/atm' : `/api/atm/${selectedAtmId}`
       const method = modalMode === 'add' ? 'POST' : 'PUT'
-      
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
-      
+
       if (json.error) throw new Error(json.error)
-      
+
       setIsModalOpen(false)
       fetchAtms(search)
     } catch (err: unknown) {
@@ -150,11 +169,11 @@ export default function AtmPage() {
     setDeleting(true)
     try {
       const res = await fetch(`/api/atm/${atmToDelete.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      
+
       setIsDeleteOpen(false)
       setAtmToDelete(null)
       fetchAtms(search)
@@ -166,7 +185,7 @@ export default function AtmPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="animate-in fade-in space-y-6 duration-300">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -177,9 +196,9 @@ export default function AtmPage() {
             Kelola katalog fisik mesin ATM BNI di seluruh unit.
           </p>
         </div>
-        <Button 
-          onClick={openAddModal} 
-          className="bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-500/10 active:scale-[0.98] self-start sm:self-auto"
+        <Button
+          onClick={openAddModal}
+          className="self-start bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:self-auto"
         >
           <Plus className="mr-2 h-4 w-4" /> Tambah ATM
         </Button>
@@ -187,9 +206,9 @@ export default function AtmPage() {
 
       {/* Main card */}
       <Card className="border-slate-200 shadow-sm dark:border-slate-800">
-        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardHeader className="flex flex-col gap-4 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-0.5">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-bold">
               <Building2 className="h-4 w-4 text-teal-600" />
               Katalog ATM
             </CardTitle>
@@ -200,12 +219,12 @@ export default function AtmPage() {
             <Search className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Cari kode, lokasi, jenis..."
-              className="pl-9 h-9"
+              className="h-9 pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button 
+              <button
                 onClick={() => setSearch('')}
                 className="absolute top-2.5 right-3 text-slate-400 hover:text-slate-600"
               >
@@ -229,7 +248,7 @@ export default function AtmPage() {
             </div>
           ) : atms.length === 0 ? (
             <div className="flex h-60 flex-col items-center justify-center text-slate-400">
-              <Building2 className="h-10 w-10 text-slate-300 mb-2" />
+              <Building2 className="mb-2 h-10 w-10 text-slate-300" />
               <p className="text-sm font-medium">Tidak ada data ATM ditemukan.</p>
             </div>
           ) : (
@@ -237,49 +256,81 @@ export default function AtmPage() {
               <Table>
                 <TableHeader className="bg-slate-50/55 dark:bg-slate-900/30">
                   <TableRow>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Kode ATM</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Kode Lama</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Lokasi</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Jenis Mesin</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Branch</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Penginput</TableHead>
-                    <TableHead className="font-semibold text-right text-slate-600 dark:text-slate-400">Aksi</TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Kode ATM
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Kode Lama
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Lokasi
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Jenis
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Cabang Pengelola
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Status Branch
+                    </TableHead>
+                    <TableHead className="text-right font-semibold text-slate-600 dark:text-slate-400">
+                      Aksi
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {atms.map((atm) => (
-                    <TableRow key={atm.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                    <TableRow
+                      key={atm.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10"
+                    >
                       <TableCell className="font-bold text-slate-800 dark:text-slate-200">
                         {atm.kodeAtm}
                       </TableCell>
                       <TableCell className="text-slate-500 dark:text-slate-400">
                         {atm.kodeAtmLama ? (
-                          <Badge variant="secondary" className="font-medium">{atm.kodeAtmLama}</Badge>
+                          <Badge variant="secondary" className="font-medium">
+                            {atm.kodeAtmLama}
+                          </Badge>
                         ) : (
-                          <span className="text-xs italic text-slate-300">-</span>
+                          <span className="text-xs text-slate-300 italic">-</span>
                         )}
                       </TableCell>
                       <TableCell className="font-medium text-slate-700 dark:text-slate-300">
                         {atm.lokasi}
                       </TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">{atm.jenisMesin}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">{atm.branch}</TableCell>
-                      <TableCell className="text-xs text-slate-400 font-medium">
-                        {atm.user?.nama || 'System'}
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        <Badge
+                          variant="outline"
+                          className="border-teal-200 bg-teal-50 text-teal-700"
+                        >
+                          {atm.jenisMesin}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {atm.cabangPengelola || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {atm.branch ? (
+                          <Badge className="bg-emerald-500 hover:bg-emerald-600">On Branch</Badge>
+                        ) : (
+                          <Badge variant="secondary">Off Branch</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-teal-600"
                             onClick={() => openEditModal(atm)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-red-600"
                             onClick={() => confirmDelete(atm)}
                           >
@@ -298,17 +349,17 @@ export default function AtmPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{modalMode === 'add' ? 'Tambah ATM Baru' : 'Edit Data ATM'}</DialogTitle>
-            <DialogDescription>
-              Isi data detail fisik mesin ATM di bawah ini.
-            </DialogDescription>
+            <DialogDescription>Isi data detail fisik mesin ATM di bawah ini.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="kodeAtm">Kode ATM <span className="text-red-500">*</span></Label>
+                <Label htmlFor="kodeAtm">
+                  Kode ATM <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="kodeAtm"
                   value={kodeAtm}
@@ -329,7 +380,9 @@ export default function AtmPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lokasi">Lokasi Penempatan <span className="text-red-500">*</span></Label>
+              <Label htmlFor="lokasi">
+                Lokasi Penempatan <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="lokasi"
                 value={lokasi}
@@ -339,34 +392,94 @@ export default function AtmPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="jenisMesin">Jenis Mesin <span className="text-red-500">*</span></Label>
-                <Input
-                  id="jenisMesin"
-                  value={jenisMesin}
-                  onChange={(e) => setJenisMesin(e.target.value)}
-                  placeholder="e.g. CRM / ATM"
-                  required
-                />
+            <div className="grid grid-cols-1 gap-6 pt-2 sm:grid-cols-2">
+              {/* Input Checkbox untuk Jenis Mesin */}
+              <div className="space-y-3">
+                <Label>
+                  Jenis Mesin <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex flex-col gap-3 pt-1">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="jenis-atm"
+                      checked={jenisMesin.includes('ATM')}
+                      onCheckedChange={(checked) =>
+                        handleJenisMesinChange(checked as boolean, 'ATM')
+                      }
+                    />
+                    <Label
+                      htmlFor="jenis-atm"
+                      className="cursor-pointer font-normal text-slate-700"
+                    >
+                      ATM (Anjungan Tunai Mandiri)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="jenis-crm"
+                      checked={jenisMesin.includes('CRM')}
+                      onCheckedChange={(checked) =>
+                        handleJenisMesinChange(checked as boolean, 'CRM')
+                      }
+                    />
+                    <Label
+                      htmlFor="jenis-crm"
+                      className="cursor-pointer font-normal text-slate-700"
+                    >
+                      CRM (Cash Recycle Machine)
+                    </Label>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="branch">Cabang Pengelola (Branch) <span className="text-red-500">*</span></Label>
-                <Input
-                  id="branch"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  placeholder="e.g. KCU Harmoni"
-                  required
-                />
+
+              <div className="space-y-4">
+                {/* Input Toggle (Switch) untuk Branch */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="branch-toggle" className="text-sm font-medium">
+                      Status Branch
+                    </Label>
+                    <p className="text-[12px] text-slate-500">
+                      Aktifkan jika mesin di area cabang.
+                    </p>
+                  </div>
+                  <Switch id="branch-toggle" checked={branch} onCheckedChange={setBranch} />
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            {/* Input Dropdown untuk Cabang Pengelola */}
+            <div className="space-y-2">
+              <Label>
+                Cabang Pengelola <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={cabangPengelola}
+                onValueChange={(val) => setCabangPengelola(val || '')}
+                required
+              >
+                {/* Penambahan w-full dilakukan di class SelectTrigger di bawah ini */}
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih cabang pengelola" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KCU Harmoni">KCU Harmoni</SelectItem>
+                  <SelectItem value="KCU Sudirman">KCU Sudirman</SelectItem>
+                  <SelectItem value="KCU Makassar">KCU Makassar</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KCU Mattoangin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Batal
               </Button>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving}>
+              <Button
+                type="submit"
+                className="bg-teal-600 text-white hover:bg-teal-700"
+                disabled={saving || jenisMesin.length === 0}
+              >
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan
               </Button>
@@ -379,23 +492,19 @@ export default function AtmPage() {
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" /> Hapus Data ATM?
             </DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus data ATM <strong>{atmToDelete?.kodeAtm}</strong>? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus data ATM <strong>{atmToDelete?.kodeAtm}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex sm:justify-end gap-2 pt-2">
+          <DialogFooter className="flex gap-2 pt-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setIsDeleteOpen(false)}>
               Batal
             </Button>
-            <Button 
-              type="button" 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={deleting}
-            >
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Hapus
             </Button>

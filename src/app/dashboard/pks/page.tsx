@@ -5,40 +5,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
-import { 
-  FileSpreadsheet, 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Loader2, 
+import {
+  FileSpreadsheet,
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  Loader2,
   X,
   AlertTriangle,
-  Calendar
+  Calendar,
 } from 'lucide-react'
 import { Pks, Atm } from '@/types'
 import { formatTanggal } from '@/lib/utils'
@@ -49,17 +49,18 @@ export default function PksPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [selectedPksId, setSelectedPksId] = useState<string | null>(null)
-  
+
   const [atmId, setAtmId] = useState('')
+  const [kodeATM, setKodeATM] = useState('')
   const [nomorPks, setNomorPks] = useState('')
   const [tanggalPks, setTanggalPks] = useState('')
   const [saving, setSaving] = useState(false)
-  
+
   // Delete states
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [pksToDelete, setPksToDelete] = useState<Pks | null>(null)
@@ -70,7 +71,9 @@ export default function PksPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/pks${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`)
+      const res = await fetch(
+        `/api/pks${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`
+      )
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setPksList(json.data || [])
@@ -107,6 +110,7 @@ export default function PksPage() {
     setModalMode('add')
     setSelectedPksId(null)
     setAtmId('')
+    setKodeATM('')
     setNomorPks('')
     setTanggalPks('')
     setIsModalOpen(true)
@@ -116,13 +120,14 @@ export default function PksPage() {
     setModalMode('edit')
     setSelectedPksId(pks.id)
     setAtmId(pks.atmId)
+    setKodeATM('')
     setNomorPks(pks.nomorPks)
-    
+
     // Format date string to YYYY-MM-DD for HTML input
     const dateObj = new Date(pks.tanggalPks)
     const formattedDate = dateObj.toISOString().split('T')[0]
     setTanggalPks(formattedDate)
-    
+
     setIsModalOpen(true)
   }
 
@@ -132,27 +137,28 @@ export default function PksPage() {
       alert('Pilih mesin ATM terlebih dahulu.')
       return
     }
-    
+
     setSaving(true)
     const payload = {
       atmId,
+      kodeATM,
       nomorPks,
-      tanggalPks
+      tanggalPks,
     }
 
     try {
       const url = modalMode === 'add' ? '/api/pks' : `/api/pks/${selectedPksId}`
       const method = modalMode === 'add' ? 'POST' : 'PUT'
-      
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
-      
+
       if (json.error) throw new Error(json.error)
-      
+
       setIsModalOpen(false)
       fetchPks(search)
     } catch (err: unknown) {
@@ -172,11 +178,11 @@ export default function PksPage() {
     setDeleting(true)
     try {
       const res = await fetch(`/api/pks/${pksToDelete.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      
+
       setIsDeleteOpen(false)
       setPksToDelete(null)
       fetchPks(search)
@@ -187,8 +193,10 @@ export default function PksPage() {
     }
   }
 
+  const selectedAtm = atms.find((atm) => atm.id === atmId)
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="animate-in fade-in space-y-6 duration-300">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -199,9 +207,9 @@ export default function PksPage() {
             Kelola dokumen PKS legal sewa tempat penempatan ATM.
           </p>
         </div>
-        <Button 
-          onClick={openAddModal} 
-          className="bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-500/10 active:scale-[0.98] self-start sm:self-auto"
+        <Button
+          onClick={openAddModal}
+          className="self-start bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:self-auto"
         >
           <Plus className="mr-2 h-4 w-4" /> Tambah PKS
         </Button>
@@ -209,9 +217,9 @@ export default function PksPage() {
 
       {/* Main card */}
       <Card className="border-slate-200 shadow-sm dark:border-slate-800">
-        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardHeader className="flex flex-col gap-4 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-0.5">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-bold">
               <FileSpreadsheet className="h-4 w-4 text-teal-600" />
               Daftar Dokumen PKS
             </CardTitle>
@@ -222,12 +230,12 @@ export default function PksPage() {
             <Search className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Cari nomor PKS, kode ATM..."
-              className="pl-9 h-9"
+              className="h-9 pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button 
+              <button
                 onClick={() => setSearch('')}
                 className="absolute top-2.5 right-3 text-slate-400 hover:text-slate-600"
               >
@@ -251,7 +259,7 @@ export default function PksPage() {
             </div>
           ) : pksList.length === 0 ? (
             <div className="flex h-60 flex-col items-center justify-center text-slate-400">
-              <FileSpreadsheet className="h-10 w-10 text-slate-300 mb-2" />
+              <FileSpreadsheet className="mb-2 h-10 w-10 text-slate-300" />
               <p className="text-sm font-medium">Tidak ada data PKS ditemukan.</p>
             </div>
           ) : (
@@ -259,16 +267,29 @@ export default function PksPage() {
               <Table>
                 <TableHeader className="bg-slate-50/55 dark:bg-slate-900/30">
                   <TableRow>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Nomor PKS</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Mesin ATM Terkait</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Lokasi ATM</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Tanggal Dokumen</TableHead>
-                    <TableHead className="font-semibold text-right text-slate-600 dark:text-slate-400">Aksi</TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Nomor PKS
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Mesin ATM Terkait
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Lokasi ATM
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Tanggal Dokumen
+                    </TableHead>
+                    <TableHead className="text-right font-semibold text-slate-600 dark:text-slate-400">
+                      Aksi
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pksList.map((pks) => (
-                    <TableRow key={pks.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                    <TableRow
+                      key={pks.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10"
+                    >
                       <TableCell className="font-bold text-slate-800 dark:text-slate-200">
                         {pks.nomorPks}
                       </TableCell>
@@ -282,23 +303,23 @@ export default function PksPage() {
                       </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">
                         <span className="flex items-center gap-1.5 text-sm">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                           {formatTanggal(pks.tanggalPks)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-teal-600"
                             onClick={() => openEditModal(pks)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-slate-500 hover:text-red-600"
                             onClick={() => confirmDelete(pks)}
                           >
@@ -319,25 +340,33 @@ export default function PksPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{modalMode === 'add' ? 'Tambah Dokumen PKS' : 'Edit Dokumen PKS'}</DialogTitle>
-            <DialogDescription>
-              Isi data detail perjanjian legal di bawah ini.
-            </DialogDescription>
+            <DialogTitle>
+              {modalMode === 'add' ? 'Tambah Dokumen PKS' : 'Edit Dokumen PKS'}
+            </DialogTitle>
+            <DialogDescription>Isi data detail perjanjian legal di bawah ini.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             <div className="space-y-2">
-              <Label htmlFor="atmId">Mesin ATM Terkait <span className="text-red-500">*</span></Label>
+              <Label htmlFor="atmId">
+                Mesin ATM Terkait <span className="text-red-500">*</span>
+              </Label>
               <Select value={atmId} onValueChange={(val) => setAtmId(val || '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih mesin ATM..." />
+                  {/* Paksa SelectValue menampilkan format teks dari selectedAtm */}
+                  <SelectValue placeholder="Pilih mesin ATM...">
+                    {selectedAtm
+                      ? `${selectedAtm.kodeAtm} - ${selectedAtm.lokasi} (${selectedAtm.branch ? 'On Branch' : 'Off Branch'})`
+                      : 'Pilih mesin ATM...'}
+                  </SelectValue>
                 </SelectTrigger>
+
                 <SelectContent className="max-h-56">
                   {atms.map((atm) => (
                     <SelectItem key={atm.id} value={atm.id}>
-                      {atm.kodeAtm} - {atm.lokasi} ({atm.branch})
+                      {atm.kodeAtm} - {atm.lokasi} ({atm.branch ? 'On Branch' : 'Off Branch'})
                     </SelectItem>
                   ))}
+
                   {atms.length === 0 && (
                     <SelectItem value="none" disabled>
                       Tidak ada ATM terdaftar. Silakan buat ATM terlebih dahulu.
@@ -348,7 +377,9 @@ export default function PksPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nomorPks">Nomor PKS <span className="text-red-500">*</span></Label>
+              <Label htmlFor="nomorPks">
+                Nomor PKS <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="nomorPks"
                 value={nomorPks}
@@ -359,7 +390,9 @@ export default function PksPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tanggalPks">Tanggal Penandatanganan <span className="text-red-500">*</span></Label>
+              <Label htmlFor="tanggalPks">
+                Tanggal Penandatanganan <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="tanggalPks"
                 type="date"
@@ -369,11 +402,15 @@ export default function PksPage() {
               />
             </div>
 
-            <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <DialogFooter className="border-t border-slate-100 pt-4 dark:border-slate-800">
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Batal
               </Button>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving}>
+              <Button
+                type="submit"
+                className="bg-teal-600 text-white hover:bg-teal-700"
+                disabled={saving}
+              >
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan
               </Button>
@@ -386,23 +423,19 @@ export default function PksPage() {
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" /> Hapus Dokumen PKS?
             </DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus dokumen PKS <strong>{pksToDelete?.nomorPks}</strong>? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus dokumen PKS <strong>{pksToDelete?.nomorPks}</strong>
+              ? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex sm:justify-end gap-2 pt-2">
+          <DialogFooter className="flex gap-2 pt-2 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setIsDeleteOpen(false)}>
               Batal
             </Button>
-            <Button 
-              type="button" 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={deleting}
-            >
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Hapus
             </Button>
