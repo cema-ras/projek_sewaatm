@@ -39,7 +39,11 @@ import {
   Mail,
   User,
   Shield,
-  ShieldCheck
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react'
 import { User as UserType } from '@/types'
 import { formatTanggal } from '@/lib/utils'
@@ -49,6 +53,10 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
@@ -85,6 +93,13 @@ export default function UsersAdminPage() {
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(users.length / pageSize) || 1
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const startIndex = (validCurrentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, users.length)
+  const paginatedUsers = users.slice(startIndex, endIndex)
 
   const openAddModal = () => {
     setModalMode('add')
@@ -229,7 +244,7 @@ export default function UsersAdminPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((targetUser) => (
+                  {paginatedUsers.map((targetUser) => (
                     <TableRow key={targetUser.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
                       <TableCell className="font-bold text-slate-800 dark:text-slate-200">
                         {targetUser.nama}
@@ -281,6 +296,85 @@ export default function UsersAdminPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controls & Pagination Footer */}
+          {!loading && users.length > 0 && (
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span>Baris per halaman:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val))
+                      setCurrentPage(1)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectValue placeholder={pageSize.toString()} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>
+                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{users.length}</strong> User
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Pertama"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Sebelumnya"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  Halaman {validCurrentPage} dari {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Selanjutnya"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Terakhir"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

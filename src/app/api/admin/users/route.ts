@@ -36,11 +36,11 @@ export async function GET() {
   }
 }
 
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
 /**
  * POST /api/admin/users
- * Menambahkan user baru ke database local
- * Catatan: User juga harus ditambahkan di Supabase Auth. Di project riil, ini 
- * memicu pembuatan akun auth. Di sini kita catat profil database-nya.
+ * Menambahkan user baru ke database local & Supabase Auth (jika SERVICE_ROLE_KEY terkonfigurasi)
  */
 export async function POST(request: Request) {
   try {
@@ -65,13 +65,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email sudah terdaftar.' }, { status: 400 })
     }
 
-    // Buat user di database
+    // 1. Dapatkan Supabase Auth ID jika Service Role Key tersedia
+    let supabaseAuthId: string | undefined = undefined
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const supabaseAdmin = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: password || 'DefaultBNI2026',
+          email_confirm: true,
+          user_metadata: { nama },
+        })
+
+        if (authError) {
+          console.warn('[Supabase Auth Admin] Info:', authError.message)
+        } else if (authData.user) {
+          supabaseAuthId = authData.user.id
+        }
+      } catch (err) {
+        console.warn('[Supabase Auth Admin] Client Warning:', err)
+      }
+    }
+
+    // 2. Buat user di database Prisma
     const newUser = await prisma.user.create({
       data: {
+        ...(supabaseAuthId ? { id: supabaseAuthId } : {}),
         nama,
         email,
         role: role as Role,
-        password: password || 'DefaultBNI2026', // Default fallback password
+        password: password || 'DefaultBNI2026',
       },
       select: {
         id: true,
@@ -93,6 +122,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: newUser, message: 'User berhasil ditambahkan.' })
   } catch (error: unknown) {
     console.error('[API ADMIN USERS POST] Gagal membuat user:', error)
-    return NextResponse.json({ error: 'Gagal membuat user baru.' }, { status: 500 })
+    const errorMsg = error instanceof Error ? error.message : 'Gagal membuat user baru.'
+    return NextResponse.json({ error: errorMsg }, { status: 500 })
   }
 }
