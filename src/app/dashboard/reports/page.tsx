@@ -31,7 +31,11 @@ import {
   Printer,
   Calendar,
   Building2,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react'
 import { Sewa } from '@/types'
 import { formatTanggal, formatRupiah, STATUS_KONTRAK_LABEL } from '@/lib/utils'
@@ -41,6 +45,10 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
   // Filters
   const [lokasi, setLokasi] = useState('')
   const [status, setStatus] = useState('all')
@@ -86,6 +94,18 @@ export default function ReportsPage() {
     }
     return true
   })
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [lokasi, status, tglMulaiMin, tglBerakhirMax])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredRentals.length / pageSize) || 1
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const startIndex = (validCurrentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredRentals.length)
+  const paginatedRentals = filteredRentals.slice(startIndex, endIndex)
 
   // Export to Excel (CSV format)
   const handleExportExcel = () => {
@@ -303,7 +323,7 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRentals.map((item) => (
+                    {paginatedRentals.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-semibold">{item.pks?.nomorPks || '-'}</TableCell>
                         <TableCell className="font-bold text-teal-700 dark:text-teal-400">{item.pks?.atm?.kodeAtm || 'N/A'}</TableCell>
@@ -320,6 +340,85 @@ export default function ReportsPage() {
                     ))}
                   </TableBody>
                 </Table>
+
+                {/* Controls & Pagination Footer */}
+                {!loading && filteredRentals.length > 0 && (
+                  <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between no-print">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <span>Baris per halaman:</span>
+                        <Select
+                          value={pageSize.toString()}
+                          onValueChange={(val) => {
+                            setPageSize(Number(val))
+                            setCurrentPage(1)
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-16 text-xs">
+                            <SelectValue placeholder={pageSize.toString()} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <span>
+                        Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredRentals.length}</strong> Laporan
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={validCurrentPage === 1}
+                        title="Halaman Pertama"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={validCurrentPage === 1}
+                        title="Halaman Sebelumnya"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+
+                      <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Halaman {validCurrentPage} dari {totalPages}
+                      </span>
+
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        disabled={validCurrentPage === totalPages}
+                        title="Halaman Selanjutnya"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={validCurrentPage === totalPages}
+                        title="Halaman Terakhir"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Print only Summary & Signature fields */}
                 <div className="hidden print:flex justify-between items-center mt-12 px-6 pt-6 border-t border-slate-200">
