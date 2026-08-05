@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
 
+const parseCoord = (val: unknown): number | null => {
+  if (val === undefined || val === null || val === '') return null
+  const num = Number(val)
+  return isNaN(num) ? null : num
+}
+
 /**
  * PUT /api/atm/[id]
  * Mengubah data ATM yang ada
@@ -19,9 +25,9 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, branch } = body
+    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, cabangPengelola, branch, latitude, longitude } = body
 
-    if (!kodeAtm || !lokasi || !jenisMesin || !branch) {
+    if (!kodeAtm || !lokasi || !jenisMesin || branch === undefined) {
       return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
     }
 
@@ -42,7 +48,10 @@ export async function PUT(
         kodeAtmLama: kodeAtmLama || null,
         lokasi,
         jenisMesin,
-        branch,
+        cabangPengelola,
+        branch: Boolean(branch),
+        latitude: parseCoord(latitude),
+        longitude: parseCoord(longitude),
       },
     })
 
@@ -58,7 +67,8 @@ export async function PUT(
     return NextResponse.json({ data: updatedAtm, message: 'Data ATM berhasil diubah.' })
   } catch (error: unknown) {
     console.error('[API ATM PUT] Gagal mengubah ATM:', error)
-    return NextResponse.json({ error: 'Gagal mengubah data ATM.' }, { status: 500 })
+    const errorMsg = error instanceof Error ? error.message : 'Gagal mengubah data ATM.'
+    return NextResponse.json({ error: errorMsg }, { status: 500 })
   }
 }
 

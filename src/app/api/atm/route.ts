@@ -49,6 +49,12 @@ export async function GET(request: Request) {
   }
 }
 
+const parseCoord = (val: unknown): number | null => {
+  if (val === undefined || val === null || val === '') return null
+  const num = Number(val)
+  return isNaN(num) ? null : num
+}
+
 /**
  * POST /api/atm
  * Menambahkan mesin ATM baru
@@ -61,16 +67,12 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    
-    // 1. TAMBAHKAN cabangPengelola di sini
-    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, cabangPengelola, branch } = body
+    const { kodeAtm, kodeAtmLama, lokasi, jenisMesin, cabangPengelola, branch, latitude, longitude } = body
 
-    // 2. PERBAIKI validasi boolean. Jangan gunakan !branch, tapi cek apakah undefined
     if (!kodeAtm || !lokasi || !jenisMesin || !cabangPengelola || branch === undefined) {
       return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
     }
 
-    // 3. Masukkan cabangPengelola ke data Prisma
     const newAtm = await prisma.atm.create({
       data: {
         userId: user.id,
@@ -78,11 +80,10 @@ export async function POST(request: Request) {
         kodeAtmLama: kodeAtmLama || null,
         lokasi,
         jenisMesin,
-        cabangPengelola, // Field baru ditambahkan
-        
-        // PENTING: Jika di schema.prisma field 'branch' masih bertipe String,
-        // ubah kode di bawah ini menjadi -> branch: String(branch)
-        branch, 
+        cabangPengelola,
+        branch: Boolean(branch),
+        latitude: parseCoord(latitude),
+        longitude: parseCoord(longitude),
       },
     })
 
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: newAtm, message: 'Data ATM berhasil ditambahkan.' })
   } catch (error: unknown) {
     console.error('[API ATM POST] Gagal membuat ATM:', error)
-    return NextResponse.json({ error: 'Gagal menambahkan ATM baru.' }, { status: 500 })
+    const errorMsg = error instanceof Error ? error.message : 'Gagal menambahkan ATM baru.'
+    return NextResponse.json({ error: errorMsg }, { status: 500 })
   }
 }

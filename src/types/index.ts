@@ -33,6 +33,8 @@ export interface Atm {
   jenisMesin: string
   cabangPengelola?: string; 
   branch: boolean | string
+  latitude?: number | null
+  longitude?: number | null
   createdAt: Date
   updatedAt: Date
   user?: User

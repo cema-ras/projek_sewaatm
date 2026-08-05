@@ -31,7 +31,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Building2, Search, Plus, Edit2, Trash2, Loader2, X, AlertTriangle } from 'lucide-react'
+import {
+  Building2,
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  Loader2,
+  X,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  MapPin,
+} from 'lucide-react'
 import { Atm } from '@/types'
 
 export default function AtmPage() {
@@ -39,6 +53,10 @@ export default function AtmPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Form/Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -51,6 +69,7 @@ export default function AtmPage() {
   const [jenisMesin, setJenisMesin] = useState<string[]>([])
   const [cabangPengelola, setCabangPengelola] = useState('')
   const [branch, setBranch] = useState(false)
+  const [koordinat, setKoordinat] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Delete Confirmation states
@@ -83,9 +102,17 @@ export default function AtmPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchAtms(search)
+      setCurrentPage(1)
     }, 400)
     return () => clearTimeout(timer)
   }, [search])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(atms.length / pageSize) || 1
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const startIndex = (validCurrentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, atms.length)
+  const paginatedAtms = atms.slice(startIndex, endIndex)
 
   const openAddModal = () => {
     setModalMode('add')
@@ -96,6 +123,7 @@ export default function AtmPage() {
     setJenisMesin([])
     setCabangPengelola('')
     setBranch(false)
+    setKoordinat('')
     setIsModalOpen(true)
   }
 
@@ -113,6 +141,12 @@ export default function AtmPage() {
     // Memastikan nilai toggle branch sesuai (konversi ke boolean jika dari backend berupa string)
     setBranch(atm.branch === true || atm.branch === 'true')
 
+    if (atm.latitude !== undefined && atm.latitude !== null && atm.longitude !== undefined && atm.longitude !== null) {
+      setKoordinat(`${atm.latitude}, ${atm.longitude}`)
+    } else {
+      setKoordinat('')
+    }
+
     setIsModalOpen(true)
   }
 
@@ -128,6 +162,20 @@ export default function AtmPage() {
     e.preventDefault()
     setSaving(true)
 
+    let parsedLat: number | null = null
+    let parsedLng: number | null = null
+    if (koordinat.trim()) {
+      const parts = koordinat.split(',').map((p) => p.trim())
+      if (parts.length >= 2) {
+        const lat = Number(parts[0])
+        const lng = Number(parts[1])
+        if (!isNaN(lat) && !isNaN(lng)) {
+          parsedLat = lat
+          parsedLng = lng
+        }
+      }
+    }
+
     const payload = {
       kodeAtm,
       kodeAtmLama: kodeAtmLama || null,
@@ -135,6 +183,8 @@ export default function AtmPage() {
       jenisMesin: jenisMesin.join(', '), // Format ke string agar mudah disimpan
       cabangPengelola,
       branch,
+      latitude: parsedLat,
+      longitude: parsedLng,
     }
 
     try {
@@ -274,13 +324,16 @@ export default function AtmPage() {
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Status Branch
                     </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Koordinat
+                    </TableHead>
                     <TableHead className="text-right font-semibold text-slate-600 dark:text-slate-400">
                       Aksi
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atms.map((atm) => (
+                  {paginatedAtms.map((atm) => (
                     <TableRow
                       key={atm.id}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10"
@@ -318,6 +371,24 @@ export default function AtmPage() {
                           <Badge variant="secondary">Off Branch</Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {atm.latitude !== null && atm.latitude !== undefined && atm.longitude !== null && atm.longitude !== undefined ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${atm.latitude},${atm.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 hover:underline dark:bg-teal-950/50 dark:text-teal-300"
+                            title="Buka lokasi di Google Maps"
+                          >
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400" />
+                            <span>
+                              {atm.latitude}, {atm.longitude}
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-300 italic dark:text-slate-600">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -342,6 +413,85 @@ export default function AtmPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controls & Pagination Footer */}
+          {!loading && atms.length > 0 && (
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span>Baris per halaman:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val))
+                      setCurrentPage(1)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectValue placeholder={pageSize.toString()} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>
+                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{atms.length}</strong> ATM
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Pertama"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Sebelumnya"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  Halaman {validCurrentPage} dari {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Selanjutnya"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Terakhir"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -390,6 +540,22 @@ export default function AtmPage() {
                 placeholder="e.g. Bandara Soekarno Hatta T3"
                 required
               />
+            </div>
+
+            {/* Input Titik Koordinat (Single Input: Latitude, Longitude) */}
+            <div className="space-y-2">
+              <Label htmlFor="koordinat" className="text-sm font-medium">
+                Titik Koordinat (Latitude, Longitude)
+              </Label>
+              <Input
+                id="koordinat"
+                value={koordinat}
+                onChange={(e) => setKoordinat(e.target.value)}
+                placeholder="e.g. -5.16798, 119.43268"
+              />
+              <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                Pisahkan latitude dan longitude dengan koma (contoh: <code className="font-mono text-teal-600 dark:text-teal-400">-5.16798, 119.43268</code>).
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-6 pt-2 sm:grid-cols-2">

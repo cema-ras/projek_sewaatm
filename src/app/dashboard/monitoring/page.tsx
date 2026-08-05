@@ -29,7 +29,11 @@ import {
   AlertTriangle,
   Calendar,
   Clock,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react'
 import { Sewa, StatusKontrak } from '@/types'
 import { formatTanggal, hitungSisaHari, STATUS_KONTRAK_LABEL, STATUS_KONTRAK_COLOR } from '@/lib/utils'
@@ -40,6 +44,10 @@ export default function MonitoringPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   // Status edit inline states
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -62,6 +70,7 @@ export default function MonitoringPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchRentals(search)
+      setCurrentPage(1)
     }, 400)
     return () => clearTimeout(timer)
   }, [search])
@@ -98,6 +107,13 @@ export default function MonitoringPage() {
     if (statusFilter === 'all') return true
     return rental.status === statusFilter
   })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredRentals.length / pageSize) || 1
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const startIndex = (validCurrentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredRentals.length)
+  const paginatedRentals = filteredRentals.slice(startIndex, endIndex)
 
   // Helper untuk sisa hari styling
   const getSisaHariBadge = (sisa: number) => {
@@ -213,7 +229,7 @@ export default function MonitoringPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRentals.map((rental) => {
+                  {paginatedRentals.map((rental) => {
                     const sisa = hitungSisaHari(rental.tglBerakhir)
                     return (
                       <TableRow key={rental.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
@@ -277,6 +293,85 @@ export default function MonitoringPage() {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Controls & Pagination Footer */}
+          {!loading && filteredRentals.length > 0 && (
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span>Baris per halaman:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val))
+                      setCurrentPage(1)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectValue placeholder={pageSize.toString()} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>
+                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredRentals.length}</strong> Kontrak
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Pertama"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={validCurrentPage === 1}
+                  title="Halaman Sebelumnya"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  Halaman {validCurrentPage} dari {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Selanjutnya"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={validCurrentPage === totalPages}
+                  title="Halaman Terakhir"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
