@@ -655,23 +655,24 @@ export default function AtmPage() {
                   <SelectValue placeholder="Pilih cabang pengelola" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="KCU Harmoni">KC BANDARA HASANUDDIN</SelectItem>
-                  <SelectItem value="KCU Sudirman">KC PASAR BUTUNG</SelectItem>
-                  <SelectItem value="KCU Makassar">KC MENARA BOSOWA</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC UNHAS TAMALANREA</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC AP PETTARANI</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC SOMBA OPU</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC BARAYA</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC SAM RATULANGI</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC UNIV NEGERI MAKASSAR</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC BOULEVARD</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC DAENG TATA</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC SULTAN HASANUDDIN</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC BUMI TAMALANREA PERMAI</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC ANTANG</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC PELABUHAN PETIKEMAS</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC CAKALANG</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KC CPI</SelectItem>
+                  <SelectItem value="KCU MAKASSAR">KCU MAKASSAR</SelectItem>
+                  <SelectItem value="KC BANDARA HASANUDDIN">KC BANDARA HASANUDDIN</SelectItem>
+                  <SelectItem value="KC PASAR BUTUNG">KC PASAR BUTUNG</SelectItem>
+                  <SelectItem value="KC MENARA BOSOWA">KC MENARA BOSOWA</SelectItem>
+                  <SelectItem value="KC UNHAS TAMALANREA">KC UNHAS TAMALANREA</SelectItem>
+                  <SelectItem value="KC AP PETTARANI">KC AP PETTARANI</SelectItem>
+                  <SelectItem value="KC SOMBA OPU">KC SOMBA OPU</SelectItem>
+                  <SelectItem value="KC BARAYA">KC BARAYA</SelectItem>
+                  <SelectItem value="KC SAM RATULANGI">KC SAM RATULANGI</SelectItem>
+                  <SelectItem value="KC UNIV NEGERI MAKASSAR">KC UNIV NEGERI MAKASSAR</SelectItem>
+                  <SelectItem value="KC BOULEVARD">KC BOULEVARD</SelectItem>
+                  <SelectItem value="KC DAENG TATA">KC DAENG TATA</SelectItem>
+                  <SelectItem value="KC SULTAN HASANUDDIN">KC SULTAN HASANUDDIN</SelectItem>
+                  <SelectItem value="KC BUMI TAMALANREA">KC BUMI TAMALANREA PERMAI</SelectItem>
+                  <SelectItem value="KC ANTANG">KC ANTANG</SelectItem>
+                  <SelectItem value="KC PELABUHAN PETIKEMAS">KC PELABUHAN PETIKEMAS</SelectItem>
+                  <SelectItem value="KC CAKALANG">KC CAKALANG</SelectItem>
+                  <SelectItem value="KC CPI">KC CPI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
