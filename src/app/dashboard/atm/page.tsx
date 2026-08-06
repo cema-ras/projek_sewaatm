@@ -141,7 +141,12 @@ export default function AtmPage() {
     // Memastikan nilai toggle branch sesuai (konversi ke boolean jika dari backend berupa string)
     setBranch(atm.branch === true || atm.branch === 'true')
 
-    if (atm.latitude !== undefined && atm.latitude !== null && atm.longitude !== undefined && atm.longitude !== null) {
+    if (
+      atm.latitude !== undefined &&
+      atm.latitude !== null &&
+      atm.longitude !== undefined &&
+      atm.longitude !== null
+    ) {
       setKoordinat(`${atm.latitude}, ${atm.longitude}`)
     } else {
       setKoordinat('')
@@ -372,7 +377,10 @@ export default function AtmPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-400">
-                        {atm.latitude !== null && atm.latitude !== undefined && atm.longitude !== null && atm.longitude !== undefined ? (
+                        {atm.latitude !== null &&
+                        atm.latitude !== undefined &&
+                        atm.longitude !== null &&
+                        atm.longitude !== undefined ? (
                           <a
                             href={`https://www.google.com/maps?q=${atm.latitude},${atm.longitude}`}
                             target="_blank"
@@ -386,7 +394,9 @@ export default function AtmPage() {
                             </span>
                           </a>
                         ) : (
-                          <span className="text-xs text-slate-300 italic dark:text-slate-600">-</span>
+                          <span className="text-xs text-slate-300 italic dark:text-slate-600">
+                            -
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -418,7 +428,7 @@ export default function AtmPage() {
 
           {/* Controls & Pagination Footer */}
           {!loading && atms.length > 0 && (
-            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <span>Baris per halaman:</span>
@@ -441,7 +451,19 @@ export default function AtmPage() {
                   </Select>
                 </div>
                 <span>
-                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{atms.length}</strong> ATM
+                  Menampilkan{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {startIndex + 1}
+                  </strong>{' '}
+                  -{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {endIndex}
+                  </strong>{' '}
+                  dari{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {atms.length}
+                  </strong>{' '}
+                  ATM
                 </span>
               </div>
 
@@ -554,7 +576,11 @@ export default function AtmPage() {
                 placeholder="e.g. -5.16798, 119.43268"
               />
               <p className="text-[12px] text-slate-500 dark:text-slate-400">
-                Pisahkan latitude dan longitude dengan koma (contoh: <code className="font-mono text-teal-600 dark:text-teal-400">-5.16798, 119.43268</code>).
+                Pisahkan latitude dan longitude dengan koma (contoh:{' '}
+                <code className="font-mono text-teal-600 dark:text-teal-400">
+                  -5.16798, 119.43268
+                </code>
+                ).
               </p>
             </div>
 
@@ -629,10 +655,23 @@ export default function AtmPage() {
                   <SelectValue placeholder="Pilih cabang pengelola" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="KCU Harmoni">KCU Harmoni</SelectItem>
-                  <SelectItem value="KCU Sudirman">KCU Sudirman</SelectItem>
-                  <SelectItem value="KCU Makassar">KCU Makassar</SelectItem>
-                  <SelectItem value="KCU Mattoangin">KCU Mattoangin</SelectItem>
+                  <SelectItem value="KCU Harmoni">KC BANDARA HASANUDDIN</SelectItem>
+                  <SelectItem value="KCU Sudirman">KC PASAR BUTUNG</SelectItem>
+                  <SelectItem value="KCU Makassar">KC MENARA BOSOWA</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC UNHAS TAMALANREA</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC AP PETTARANI</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC SOMBA OPU</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC BARAYA</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC SAM RATULANGI</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC UNIV NEGERI MAKASSAR</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC BOULEVARD</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC DAENG TATA</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC SULTAN HASANUDDIN</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC BUMI TAMALANREA PERMAI</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC ANTANG</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC PELABUHAN PETIKEMAS</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC CAKALANG</SelectItem>
+                  <SelectItem value="KCU Mattoangin">KC CPI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
