@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/atm
- * Mendapatkan daftar mesin ATM dengan pencarian opsional
+ * Mendapatkan daftar mesin ATM dengan pencarian opsional (hanya data aktif, isDeleted: false)
  */
 export async function GET(request: Request) {
   try {
@@ -20,20 +20,20 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || ''
 
     const atmList = await prisma.atm.findMany({
-      where: search
-        ? {
-            OR: [
-              { kodeAtm: { contains: search, mode: 'insensitive' } },
-              { kodeAtmLama: { contains: search, mode: 'insensitive' } },
-              { lokasi: { contains: search, mode: 'insensitive' } },
-              { jenisMesin: { contains: search, mode: 'insensitive' } },
-              { cabangPengelola: { contains: search, mode: 'insensitive' } },
-              
-              // HAPUS { branch: { contains: search } } 
-              // Karena branch sekarang Boolean, fungsi contains() akan membuat Prisma error.
-            ],
-          }
-        : {},
+      where: {
+        isDeleted: false,
+        ...(search
+          ? {
+              OR: [
+                { kodeAtm: { contains: search, mode: 'insensitive' } },
+                { kodeAtmLama: { contains: search, mode: 'insensitive' } },
+                { lokasi: { contains: search, mode: 'insensitive' } },
+                { jenisMesin: { contains: search, mode: 'insensitive' } },
+                { cabangPengelola: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
         branch: Boolean(branch),
         latitude: parseCoord(latitude),
         longitude: parseCoord(longitude),
+        isDeleted: false,
       },
     })
 

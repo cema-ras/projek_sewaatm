@@ -35,6 +35,7 @@ export interface Atm {
   branch: boolean | string
   latitude?: number | null
   longitude?: number | null
+  isDeleted?: boolean
   createdAt: Date
   updatedAt: Date
   user?: User
@@ -46,6 +47,7 @@ export interface Pks {
   atmId: string
   nomorPks: string
   tanggalPks: Date
+  isDeleted?: boolean
   createdAt: Date
   updatedAt: Date
   atm?: Atm
@@ -61,6 +63,7 @@ export interface Sewa {
   tglBerakhir: Date
   keterangan?: string | null
   filePdf?: string | null
+  isDeleted?: boolean
   createdAt: Date
   updatedAt: Date
   // Computed fields (tidak dari DB):

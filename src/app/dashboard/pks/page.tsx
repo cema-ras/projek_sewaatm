@@ -320,9 +320,16 @@ export default function PksPage() {
                         {pks.nomorPks}
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-teal-600 font-bold hover:bg-teal-700">
-                          {pks.atm?.kodeAtm || 'Tidak Ditemukan'}
-                        </Badge>
+                        {pks.atm?.isDeleted ? (
+                          <Badge className="animate-pulse border border-red-200 bg-red-100 font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+                            <AlertTriangle className="mr-1 h-3 w-3 shrink-0" />
+                            ATM Dihapus
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-teal-600 font-bold hover:bg-teal-700">
+                            {pks.atm?.kodeAtm || 'Tidak Ditemukan'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="font-medium text-slate-700 dark:text-slate-300">
                         {pks.atm?.lokasi || '-'}
@@ -478,13 +485,16 @@ export default function PksPage() {
                 </SelectTrigger>
 
                 <SelectContent className="max-h-56">
-                  {atms.map((atm) => (
-                    <SelectItem key={atm.id} value={atm.id}>
-                      {atm.kodeAtm} - {atm.lokasi} ({atm.branch ? 'On Branch' : 'Off Branch'})
-                    </SelectItem>
-                  ))}
+                  {atms
+                    .filter((atm) => !atm.isDeleted || atm.id === atmId)
+                    .map((atm) => (
+                      <SelectItem key={atm.id} value={atm.id}>
+                        {atm.kodeAtm} - {atm.lokasi} ({atm.branch ? 'On Branch' : 'Off Branch'})
+                        {atm.isDeleted ? ' (ATM Dihapus)' : ''}
+                      </SelectItem>
+                    ))}
 
-                  {atms.length === 0 && (
+                  {atms.filter((atm) => !atm.isDeleted).length === 0 && (
                     <SelectItem value="none" disabled>
                       Tidak ada ATM terdaftar. Silakan buat ATM terlebih dahulu.
                     </SelectItem>

@@ -56,6 +56,7 @@ model Atm {
   cabangPengelola String
   latitude        Float?
   longitude       Float?
+  isDeleted       Boolean  @default(false) @map("is_deleted")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -70,6 +71,7 @@ model Pks {
   atmId      String   @map("id_atm")
   nomorPks   String   @map("nomor_pks")
   tanggalPks DateTime @map("tanggal_pks")
+  isDeleted  Boolean  @default(false) @map("is_deleted")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -89,6 +91,7 @@ model Sewa {
   tglBerakhir DateTime @map("tgl_berakhir")
   keterangan  String?
   filePdf     String?  @map("file_pdf")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/pks
- * Mendapatkan daftar PKS dengan pencarian opsional
+ * Mendapatkan daftar PKS dengan pencarian opsional (hanya data aktif, isDeleted: false)
  */
 export async function GET(request: Request) {
   try {
@@ -20,27 +20,33 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || ''
 
     const pksList = await prisma.pks.findMany({
-      where: search
-        ? {
-            OR: [
-              { nomorPks: { contains: search, mode: 'insensitive' } },
-              {
-                atm: {
-                  OR: [
-                    { kodeAtm: { contains: search, mode: 'insensitive' } },
-                    { lokasi: { contains: search, mode: 'insensitive' } },
-                  ],
+      where: {
+        isDeleted: false,
+        ...(search
+          ? {
+              OR: [
+                { nomorPks: { contains: search, mode: 'insensitive' } },
+                {
+                  atm: {
+                    OR: [
+                      { kodeAtm: { contains: search, mode: 'insensitive' } },
+                      { lokasi: { contains: search, mode: 'insensitive' } },
+                    ],
+                  },
                 },
-              },
-            ],
-          }
-        : {},
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         atm: {
           select: {
+            id: true,
             kodeAtm: true,
             lokasi: true,
+            branch: true,
+            isDeleted: true,
           },
         },
       },
@@ -77,6 +83,7 @@ export async function POST(request: Request) {
         atmId,
         nomorPks,
         tanggalPks: new Date(tanggalPks),
+        isDeleted: false,
       },
     })
 

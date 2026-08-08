@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/rental
- * Mendapatkan daftar Sewa dengan pencarian opsional
+ * Mendapatkan daftar Sewa dengan pencarian opsional (hanya data aktif, isDeleted: false)
  */
 export async function GET(request: Request) {
   try {
@@ -23,28 +23,31 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || ''
 
     const rentalList = await prisma.sewa.findMany({
-      where: search
-        ? {
-            OR: [
-              { keterangan: { contains: search, mode: 'insensitive' } },
-              {
-                pks: {
-                  OR: [
-                    { nomorPks: { contains: search, mode: 'insensitive' } },
-                    {
-                      atm: {
-                        OR: [
-                          { kodeAtm: { contains: search, mode: 'insensitive' } },
-                          { lokasi: { contains: search, mode: 'insensitive' } },
-                        ],
+      where: {
+        isDeleted: false,
+        ...(search
+          ? {
+              OR: [
+                { keterangan: { contains: search, mode: 'insensitive' } },
+                {
+                  pks: {
+                    OR: [
+                      { nomorPks: { contains: search, mode: 'insensitive' } },
+                      {
+                        atm: {
+                          OR: [
+                            { kodeAtm: { contains: search, mode: 'insensitive' } },
+                            { lokasi: { contains: search, mode: 'insensitive' } },
+                          ],
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            ],
-          }
-        : {},
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         monitoringKontrak: {
@@ -53,12 +56,17 @@ export async function GET(request: Request) {
           },
         },
         pks: {
-          include: {
+          select: {
+            id: true,
+            nomorPks: true,
+            isDeleted: true,
             atm: {
               select: {
+                id: true,
                 kodeAtm: true,
                 lokasi: true,
                 branch: true,
+                isDeleted: true,
               },
             },
           },
@@ -81,6 +89,7 @@ export async function GET(request: Request) {
         tglBerakhir: item.tglBerakhir,
         keterangan: item.keterangan,
         filePdf: item.filePdf,
+        isDeleted: item.isDeleted,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         masaSewa: hitungMasaSewa(item.tglMulai, item.tglBerakhir), // Computed field
@@ -159,6 +168,7 @@ export async function POST(request: Request) {
           tglBerakhir: new Date(tglBerakhir),
           keterangan: keterangan || null,
           filePdf: filePdfPath,
+          isDeleted: false,
         },
       })
 

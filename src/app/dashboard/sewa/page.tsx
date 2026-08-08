@@ -384,16 +384,33 @@ export default function RentalPage() {
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10"
                     >
                       <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
-                        {rental.pks?.nomorPks || '-'}
+                        {rental.pks?.isDeleted ? (
+                          <div className="flex flex-col gap-1">
+                            <span>{rental.pks?.nomorPks || '-'}</span>
+                            <Badge className="w-max animate-pulse border border-red-200 bg-red-100 font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+                              <AlertTriangle className="mr-1 h-3 w-3 shrink-0" />
+                              PKS Dihapus
+                            </Badge>
+                          </div>
+                        ) : (
+                          rental.pks?.nomorPks || '-'
+                        )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-teal-600 uppercase">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold uppercase text-teal-600">
                             {rental.pks?.atm?.kodeAtm || 'N/A'}
                           </span>
-                          <span className="max-w-44 truncate text-xs font-medium text-slate-500">
-                            {rental.pks?.atm?.lokasi || '-'}
-                          </span>
+                          {rental.pks?.atm?.isDeleted ? (
+                            <Badge className="w-max animate-pulse border border-red-200 bg-red-100 font-bold text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+                              <AlertTriangle className="mr-1 h-3 w-3 shrink-0" />
+                              ATM Dihapus
+                            </Badge>
+                          ) : (
+                            <span className="max-w-44 truncate text-xs font-medium text-slate-500">
+                              {rental.pks?.atm?.lokasi || '-'}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -601,13 +618,16 @@ export default function RentalPage() {
                 </SelectTrigger>
 
                 <SelectContent className="max-h-56">
-                  {pksList.map((pks) => (
-                    <SelectItem key={pks.id} value={pks.id}>
-                      {pks.nomorPks} (ATM: {pks.atm?.kodeAtm || '-'})
-                    </SelectItem>
-                  ))}
+                  {pksList
+                    .filter((pks) => (!pks.isDeleted && !pks.atm?.isDeleted) || pks.id === pksId)
+                    .map((pks) => (
+                      <SelectItem key={pks.id} value={pks.id}>
+                        {pks.nomorPks} (ATM: {pks.atm?.kodeAtm || '-'})
+                        {pks.isDeleted ? ' (PKS Dihapus)' : pks.atm?.isDeleted ? ' (ATM Dihapus)' : ''}
+                      </SelectItem>
+                    ))}
 
-                  {pksList.length === 0 && (
+                  {pksList.filter((pks) => !pks.isDeleted && !pks.atm?.isDeleted).length === 0 && (
                     <SelectItem value="none" disabled>
                       Tidak ada PKS terdaftar. Silakan buat PKS terlebih dahulu.
                     </SelectItem>

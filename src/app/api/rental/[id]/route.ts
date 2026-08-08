@@ -22,8 +22,8 @@ export async function PUT(
     }
 
     const { id } = await params
-    const oldSewa = await prisma.sewa.findUnique({
-      where: { id },
+    const oldSewa = await prisma.sewa.findFirst({
+      where: { id, isDeleted: false },
       include: { monitoringKontrak: true }
     })
 
@@ -139,7 +139,7 @@ export async function PUT(
 
 /**
  * DELETE /api/rental/[id]
- * Menghapus data sewa, monitoring kontrak terkait, serta file PDF fisik
+ * Soft delete data Sewa (mengubah isDeleted menjadi true)
  */
 export async function DELETE(
   request: Request,
@@ -158,29 +158,23 @@ export async function DELETE(
       include: { monitoringKontrak: true }
     })
 
-    if (!oldSewa) {
+    if (!oldSewa || oldSewa.isDeleted) {
       return NextResponse.json({ error: 'Kontrak sewa tidak ditemukan.' }, { status: 404 })
     }
 
-    if (oldSewa.filePdf) {
-      await deleteUploadedFile(oldSewa.filePdf)
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.monitoringKontrak.deleteMany({
-        where: { sewaId: id }
-      })
-      
-      await tx.sewa.delete({
-        where: { id }
-      })
+    // Lakukan Soft Delete (ubah isDeleted: true)
+    const softDeletedSewa = await prisma.sewa.update({
+      where: { id },
+      data: { isDeleted: true },
     })
 
+    // Catat ke Activity Log
     await createActivityLog({
       userId: user.id,
       modul: 'RENTAL',
       aksi: 'HAPUS',
       dataSebelum: oldSewa as unknown as Record<string, unknown>,
+      dataSetelah: softDeletedSewa as unknown as Record<string, unknown>,
     })
 
     return NextResponse.json({ message: 'Kontrak sewa berhasil dihapus.' })

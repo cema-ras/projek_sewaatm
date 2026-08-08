@@ -26,8 +26,8 @@ export async function PUT(
     }
 
     // Ambil data sebelum diubah untuk log
-    const oldPks = await prisma.pks.findUnique({
-      where: { id },
+    const oldPks = await prisma.pks.findFirst({
+      where: { id, isDeleted: false },
     })
 
     if (!oldPks) {
@@ -62,7 +62,7 @@ export async function PUT(
 
 /**
  * DELETE /api/pks/[id]
- * Menghapus data PKS
+ * Soft delete data PKS (mengubah isDeleted menjadi true)
  */
 export async function DELETE(
   request: Request,
@@ -81,13 +81,14 @@ export async function DELETE(
       where: { id },
     })
 
-    if (!oldPks) {
+    if (!oldPks || oldPks.isDeleted) {
       return NextResponse.json({ error: 'Data PKS tidak ditemukan.' }, { status: 404 })
     }
 
-    // Lakukan penghapusan
-    await prisma.pks.delete({
+    // Lakukan Soft Delete
+    const softDeletedPks = await prisma.pks.update({
       where: { id },
+      data: { isDeleted: true },
     })
 
     // Catat ke Activity Log
@@ -96,11 +97,12 @@ export async function DELETE(
       modul: 'PKS',
       aksi: 'HAPUS',
       dataSebelum: oldPks as unknown as Record<string, unknown>,
+      dataSetelah: softDeletedPks as unknown as Record<string, unknown>,
     })
 
     return NextResponse.json({ message: 'Data PKS berhasil dihapus.' })
   } catch (error: unknown) {
     console.error('[API PKS DELETE] Gagal menghapus PKS:', error)
-    return NextResponse.json({ error: 'Gagal menghapus data PKS. Pastikan tidak ada data Sewa yang terikat dengan PKS ini.' }, { status: 500 })
+    return NextResponse.json({ error: 'Gagal menghapus data PKS.' }, { status: 500 })
   }
 }

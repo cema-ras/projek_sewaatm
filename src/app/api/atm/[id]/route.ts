@@ -32,8 +32,8 @@ export async function PUT(
     }
 
     // Ambil data sebelum diubah untuk log
-    const oldAtm = await prisma.atm.findUnique({
-      where: { id },
+    const oldAtm = await prisma.atm.findFirst({
+      where: { id, isDeleted: false },
     })
 
     if (!oldAtm) {
@@ -74,7 +74,7 @@ export async function PUT(
 
 /**
  * DELETE /api/atm/[id]
- * Menghapus data ATM
+ * Soft delete data ATM (mengubah isDeleted menjadi true)
  */
 export async function DELETE(
   request: Request,
@@ -93,13 +93,14 @@ export async function DELETE(
       where: { id },
     })
 
-    if (!oldAtm) {
+    if (!oldAtm || oldAtm.isDeleted) {
       return NextResponse.json({ error: 'Data ATM tidak ditemukan.' }, { status: 404 })
     }
 
-    // Lakukan penghapusan
-    await prisma.atm.delete({
+    // Lakukan Soft Delete
+    const softDeletedAtm = await prisma.atm.update({
       where: { id },
+      data: { isDeleted: true },
     })
 
     // Catat ke Activity Log
@@ -108,11 +109,12 @@ export async function DELETE(
       modul: 'ATM',
       aksi: 'HAPUS',
       dataSebelum: oldAtm as unknown as Record<string, unknown>,
+      dataSetelah: softDeletedAtm as unknown as Record<string, unknown>,
     })
 
     return NextResponse.json({ message: 'Data ATM berhasil dihapus.' })
   } catch (error: unknown) {
     console.error('[API ATM DELETE] Gagal menghapus ATM:', error)
-    return NextResponse.json({ error: 'Gagal menghapus data ATM. Pastikan tidak ada data PKS yang terikat dengan ATM ini.' }, { status: 500 })
+    return NextResponse.json({ error: 'Gagal menghapus data ATM.' }, { status: 500 })
   }
 }
