@@ -38,12 +38,14 @@ import {
   Loader2,
   X,
   AlertTriangle,
-  Calendar,
   Coins,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
+  ExternalLink,
+  Upload,
 } from 'lucide-react'
 import { Sewa, Pks } from '@/types'
 import {
@@ -51,6 +53,9 @@ import {
   formatRupiah,
   STATUS_KONTRAK_LABEL,
   STATUS_KONTRAK_COLOR,
+  truncateFileName,
+  getCleanFileName,
+  hitungTotalNilaiSewa,
 } from '@/lib/utils'
 
 export default function RentalPage() {
@@ -75,6 +80,12 @@ export default function RentalPage() {
   const [tglBerakhir, setTglBerakhir] = useState('')
   const [keterangan, setKeterangan] = useState('')
   const [status, setStatus] = useState('aktif')
+
+  // PDF states
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [existingPdf, setExistingPdf] = useState<string | null>(null)
+  const [removePdf, setRemovePdf] = useState(false)
+
   const [saving, setSaving] = useState(false)
 
   // Delete states
@@ -130,6 +141,15 @@ export default function RentalPage() {
     fetchPksList()
   }, [])
 
+  // -------------------------------------------------------------
+  // Fungsi Helper untuk Format Ribuan di Input
+  // -------------------------------------------------------------
+  const handleNilaiSewaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '')
+    const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    setNilaiSewa(formattedValue)
+  }
+
   const openAddModal = () => {
     setModalMode('add')
     setSelectedRentalId(null)
@@ -139,6 +159,9 @@ export default function RentalPage() {
     setTglBerakhir('')
     setKeterangan('')
     setStatus('aktif')
+    setPdfFile(null)
+    setExistingPdf(null)
+    setRemovePdf(false)
     setIsModalOpen(true)
   }
 
@@ -146,15 +169,21 @@ export default function RentalPage() {
     setModalMode('edit')
     setSelectedRentalId(rental.id)
     setPksId(rental.pksId)
-    setNilaiSewa(String(rental.nilaiSewa))
+
+    const rawSewa = String(rental.nilaiSewa).replace(/\D/g, '')
+    setNilaiSewa(rawSewa.replace(/\B(?=(\d{3})+(?!\d))/g, '.'))
+
     setKeterangan(rental.keterangan || '')
     setStatus(rental.status || 'aktif')
 
-    // Format dates for html input
     const startObj = new Date(rental.tglMulai)
     const endObj = new Date(rental.tglBerakhir)
     setTglMulai(startObj.toISOString().split('T')[0])
     setTglBerakhir(endObj.toISOString().split('T')[0])
+
+    setExistingPdf(rental.filePdf || null)
+    setPdfFile(null)
+    setRemovePdf(false)
 
     setIsModalOpen(true)
   }
@@ -167,23 +196,29 @@ export default function RentalPage() {
     }
 
     setSaving(true)
-    const payload = {
-      pksId,
-      nilaiSewa: Number(nilaiSewa),
-      tglMulai,
-      tglBerakhir,
-      keterangan,
-      status,
-    }
 
     try {
       const url = modalMode === 'add' ? '/api/rental' : `/api/rental/${selectedRentalId}`
       const method = modalMode === 'add' ? 'POST' : 'PUT'
 
+      const formData = new FormData()
+      formData.append('pksId', pksId)
+      formData.append('nilaiSewa', nilaiSewa.replace(/\./g, ''))
+      formData.append('tglMulai', tglMulai)
+      formData.append('tglBerakhir', tglBerakhir)
+      formData.append('keterangan', keterangan)
+      formData.append('status', status)
+
+      if (pdfFile) {
+        formData.append('filePdf', pdfFile)
+      }
+      if (removePdf) {
+        formData.append('removePdf', 'true')
+      }
+
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
       })
       const json = await res.json()
 
@@ -228,21 +263,32 @@ export default function RentalPage() {
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            Data Sewa (Rental)
+            Data Sewa
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Kelola transaksi nilai sewa, periode sewa, dan integrasi dengan dokumen PKS ATM.
+            Kelola transaksi nilai sewa, periode sewa, lampiran PDF, dan integrasi dengan dokumen
+            PKS ATM.
           </p>
         </div>
-        <Button
-          onClick={openAddModal}
-          className="self-start bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:self-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Tambah Sewa
-        </Button>
+
+        {/* Container untuk Alert & Button */}
+        <div className="flex flex-col gap-3 self-start sm:flex-row sm:items-center lg:self-auto">
+          {/* Peringatan Kedip-Kedip */}
+          <div className="flex animate-pulse items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Isi Data PKS terlebih dahulu sebelum mengisi Data Sewa</span>
+          </div>
+
+          <Button
+            onClick={openAddModal}
+            className="w-full bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Tambah Sewa
+          </Button>
+        </div>
       </div>
 
       {/* Main Card */}
@@ -253,7 +299,9 @@ export default function RentalPage() {
               <CalendarClock className="h-4 w-4 text-teal-600" />
               Kontrak Sewa
             </CardTitle>
-            <CardDescription>Integrasi nilai transaksi sewa dan durasi kontrak.</CardDescription>
+            <CardDescription>
+              Integrasi nilai transaksi sewa, durasi kontrak, dan dokumen PDF.
+            </CardDescription>
           </div>
           {/* Search bar */}
           <div className="relative w-full sm:w-72">
@@ -304,13 +352,19 @@ export default function RentalPage() {
                       Kode & Lokasi ATM
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
-                      Nilai Sewa
-                    </TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Periode Kontrak
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Masa Sewa
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Nilai Sewa
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Total Nilai Sewa
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Dokumen PDF
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Status
@@ -342,9 +396,6 @@ export default function RentalPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-bold text-emerald-700 dark:text-emerald-400">
-                        {formatRupiah(rental.nilaiSewa)}
-                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col text-xs text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1">
@@ -360,13 +411,45 @@ export default function RentalPage() {
                       <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {rental.masaSewa}
                       </TableCell>
+                      <TableCell className="font-bold text-emerald-700 dark:text-emerald-400">
+                        {formatRupiah(rental.nilaiSewa)}
+                      </TableCell>
+                      <TableCell className="font-extrabold text-teal-700 dark:text-teal-400">
+                        {formatRupiah(
+                          rental.totalNilaiSewa ||
+                            hitungTotalNilaiSewa(
+                              rental.nilaiSewa,
+                              rental.tglMulai,
+                              rental.tglBerakhir
+                            )
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {rental.filePdf ? (
+                          <a
+                            href={rental.filePdf}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50/80 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60"
+                            title="Lihat / Download File PDF"
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0" />
+                            <span>Dokumen</span>
+                            <ExternalLink className="h-3 w-3 opacity-70" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-600">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
                             STATUS_KONTRAK_COLOR[rental.status || 'aktif']
                           }`}
                         >
-                          {STATUS_KONTRAK_LABEL[rental.status || 'aktif']}
+                          {STATUS_KONTRAK_LABEL[
+                            rental.status as keyof typeof STATUS_KONTRAK_LABEL
+                          ] || 'Aktif'}
                         </span>
                       </TableCell>
                       <TableCell className="max-w-36 truncate text-xs text-slate-500">
@@ -401,7 +484,7 @@ export default function RentalPage() {
 
           {/* Controls & Pagination Footer */}
           {!loading && rentals.length > 0 && (
-            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <span>Baris per halaman:</span>
@@ -424,7 +507,19 @@ export default function RentalPage() {
                   </Select>
                 </div>
                 <span>
-                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{rentals.length}</strong> Sewa
+                  Menampilkan{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {startIndex + 1}
+                  </strong>{' '}
+                  -{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {endIndex}
+                  </strong>{' '}
+                  dari{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {rentals.length}
+                  </strong>{' '}
+                  Sewa
                 </span>
               </div>
 
@@ -482,13 +577,13 @@ export default function RentalPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {modalMode === 'add' ? 'Tambah Kontrak Sewa' : 'Edit Kontrak Sewa'}
             </DialogTitle>
             <DialogDescription>
-              Isi data detail transaksi finansial dan periode sewa.
+              Isi data detail transaksi finansial, periode sewa, dan dokumen pendukung.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -498,7 +593,6 @@ export default function RentalPage() {
               </Label>
               <Select value={pksId} onValueChange={(val) => setPksId(val || '')}>
                 <SelectTrigger className="w-full">
-                  {/* Paksa SelectValue menampilkan format teks dari selectedPks */}
                   <SelectValue placeholder="Pilih dokumen PKS...">
                     {selectedPks
                       ? `${selectedPks.nomorPks} (ATM: ${selectedPks.atm?.kodeAtm || '-'})`
@@ -530,17 +624,34 @@ export default function RentalPage() {
                 <Coins className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="nilaiSewa"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={nilaiSewa}
-                  onChange={(e) => setNilaiSewa(e.target.value)}
-                  placeholder="e.g. 15000000"
+                  onChange={handleNilaiSewaChange}
+                  placeholder="e.g. 15.000.000"
                   className="pl-9"
                   required
                 />
               </div>
+              {nilaiSewa && tglMulai && tglBerakhir && Number(nilaiSewa.replace(/\./g, '')) > 0 && (
+                <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/40">
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                    Total Nilai Sewa (Masa Kontrak):
+                  </span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                    {formatRupiah(
+                      hitungTotalNilaiSewa(
+                        Number(nilaiSewa.replace(/\./g, '')),
+                        tglMulai,
+                        tglBerakhir
+                      )
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="tglMulai">
                   Tanggal Mulai <span className="text-red-500">*</span>
@@ -571,16 +682,104 @@ export default function RentalPage() {
               <Label htmlFor="status">Status Kontrak</Label>
               <Select value={status} onValueChange={(val) => setStatus(val || 'aktif')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih status..." />
+                  <SelectValue placeholder="Pilih status...">
+                    {status
+                      ? (STATUS_KONTRAK_LABEL as Record<string, string>)[status] ||
+                        'Pilih status...'
+                      : 'Pilih status...'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="aktif">Aktif</SelectItem>
-                  <SelectItem value="tidak_aktif">Tidak Aktif</SelectItem>
-                  <SelectItem value="dalam_pemeliharaan">Dalam Pemeliharaan</SelectItem>
-                  <SelectItem value="dipindahkan">Dipindahkan</SelectItem>
-                  <SelectItem value="dihentikan">Dihentikan</SelectItem>
+                  {Object.entries(STATUS_KONTRAK_LABEL).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {String(label)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Field Upload PDF */}
+            <div className="space-y-2">
+              <Label htmlFor="pdfFile">Dokumen Kontrak PDF</Label>
+              {existingPdf && !removePdf ? (
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex min-w-0 items-center gap-2 text-xs">
+                    <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                    <span
+                      className="block max-w-[150px] truncate font-medium text-slate-700 sm:max-w-[220px] dark:text-slate-300"
+                      title={getCleanFileName(existingPdf)}
+                    >
+                      {truncateFileName(existingPdf, 22)}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <a
+                      href={existingPdf}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-7 items-center gap-1 rounded bg-teal-50 px-2 text-xs font-semibold text-teal-600 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-400"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Lihat
+                    </a>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                      onClick={() => {
+                        setRemovePdf(true)
+                        setPdfFile(null)
+                      }}
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" /> Hapus
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pdfFile"
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          if (
+                            !file.type.includes('pdf') &&
+                            !file.name.toLowerCase().endsWith('.pdf')
+                          ) {
+                            alert('File harus berformat PDF.')
+                            e.target.value = ''
+                            return
+                          }
+                          setPdfFile(file)
+                          setRemovePdf(false)
+                        }
+                      }}
+                      className="cursor-pointer text-xs"
+                    />
+                  </div>
+                  {pdfFile && (
+                    <div className="flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1 text-xs text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">
+                      <span className="max-w-[200px] truncate font-medium" title={pdfFile.name}>
+                        Akan diupload: {truncateFileName(pdfFile.name, 22)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPdfFile(null)}
+                        className="ml-2 text-slate-400 hover:text-red-500"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Format file: PDF (Maksimal 10MB)
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -618,8 +817,8 @@ export default function RentalPage() {
               <AlertTriangle className="h-5 w-5" /> Hapus Kontrak Sewa?
             </DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus data sewa ini? Status monitoring kontrak yang
-              bersangkutan juga akan dihapus.
+              Apakah Anda yakin ingin menghapus data sewa ini? Status monitoring kontrak serta file
+              PDF pendukung yang tersimpan juga akan dihapus.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 pt-2 sm:justify-end">

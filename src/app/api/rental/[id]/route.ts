@@ -3,10 +3,13 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
 import { StatusKontrak } from '@prisma/client'
+import { saveUploadedPdf, deleteUploadedFile } from '@/lib/file-upload'
+import { hitungTotalNilaiSewa } from '@/lib/utils'
 
 /**
  * PUT /api/rental/[id]
  * Mengubah data sewa dan monitoring kontrak
+ * Mendukung JSON & FormData (untuk update file PDF)
  */
 export async function PUT(
   request: Request,
@@ -19,14 +22,6 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
-    const { pksId, nilaiSewa, tglMulai, tglBerakhir, keterangan, status } = body
-
-    if (!pksId || !nilaiSewa || !tglMulai || !tglBerakhir) {
-      return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
-    }
-
-    // Ambil data lama untuk logging
     const oldSewa = await prisma.sewa.findUnique({
       where: { id },
       include: { monitoringKontrak: true }
@@ -36,16 +31,75 @@ export async function PUT(
       return NextResponse.json({ error: 'Kontrak sewa tidak ditemukan.' }, { status: 404 })
     }
 
+    const contentType = request.headers.get('content-type') || ''
+
+    let pksId = oldSewa.pksId
+    let nilaiSewa: number | string = Number(oldSewa.nilaiSewa)
+    let tglMulai = oldSewa.tglMulai.toISOString()
+    let tglBerakhir = oldSewa.tglBerakhir.toISOString()
+    let keterangan = oldSewa.keterangan
+    let status: StatusKontrak | undefined = undefined
+    let finalFilePdf: string | null = oldSewa.filePdf
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      pksId = (formData.get('pksId') as string) || pksId
+      nilaiSewa = (formData.get('nilaiSewa') as string) || nilaiSewa
+      tglMulai = (formData.get('tglMulai') as string) || tglMulai
+      tglBerakhir = (formData.get('tglBerakhir') as string) || tglBerakhir
+      keterangan = formData.has('keterangan') ? (formData.get('keterangan') as string) : keterangan
+      if (formData.has('status')) {
+        status = formData.get('status') as StatusKontrak
+      }
+
+      const removePdf = formData.get('removePdf') === 'true'
+      const file = formData.get('filePdf') as File | null
+
+      if (file && file.size > 0) {
+        if (oldSewa.filePdf) {
+          await deleteUploadedFile(oldSewa.filePdf)
+        }
+        finalFilePdf = await saveUploadedPdf(file)
+      } else if (removePdf) {
+        if (oldSewa.filePdf) {
+          await deleteUploadedFile(oldSewa.filePdf)
+        }
+        finalFilePdf = null
+      }
+    } else {
+      const body = await request.json()
+      pksId = body.pksId ?? pksId
+      nilaiSewa = body.nilaiSewa ?? nilaiSewa
+      tglMulai = body.tglMulai ?? tglMulai
+      tglBerakhir = body.tglBerakhir ?? tglBerakhir
+      keterangan = body.keterangan !== undefined ? body.keterangan : keterangan
+      status = body.status
+      if (body.removePdf) {
+        if (oldSewa.filePdf) {
+          await deleteUploadedFile(oldSewa.filePdf)
+        }
+        finalFilePdf = null
+      }
+    }
+
+    if (!pksId || !nilaiSewa || !tglMulai || !tglBerakhir) {
+      return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
+    }
+
+    const computedTotal = hitungTotalNilaiSewa(Number(nilaiSewa), tglMulai, tglBerakhir)
+
     // Update Sewa & MonitoringKontrak dalam transaksi
     const updatedSewa = await prisma.$transaction(async (tx) => {
       const sewa = await tx.sewa.update({
         where: { id },
         data: {
           pksId,
-          nilaiSewa,
+          nilaiSewa: Number(nilaiSewa),
+          totalNilaiSewa: computedTotal,
           tglMulai: new Date(tglMulai),
           tglBerakhir: new Date(tglBerakhir),
           keterangan: keterangan || null,
+          filePdf: finalFilePdf,
         },
       })
 
@@ -78,13 +132,14 @@ export async function PUT(
     return NextResponse.json({ data: updatedSewa, message: 'Kontrak sewa berhasil diubah.' })
   } catch (error: unknown) {
     console.error('[API RENTAL PUT] Gagal mengubah Sewa:', error)
-    return NextResponse.json({ error: 'Gagal mengubah kontrak sewa.' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Gagal mengubah kontrak sewa.'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 
 /**
  * DELETE /api/rental/[id]
- * Menghapus data sewa dan monitoring kontrak terkait
+ * Menghapus data sewa, monitoring kontrak terkait, serta file PDF fisik
  */
 export async function DELETE(
   request: Request,
@@ -107,20 +162,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Kontrak sewa tidak ditemukan.' }, { status: 404 })
     }
 
-    // Hapus Sewa dan MonitoringKontrak (Prisma cascading / transaction)
+    if (oldSewa.filePdf) {
+      await deleteUploadedFile(oldSewa.filePdf)
+    }
+
     await prisma.$transaction(async (tx) => {
-      // Hapus monitoring kontrak dulu karena foreign key dependency
       await tx.monitoringKontrak.deleteMany({
         where: { sewaId: id }
       })
       
-      // Hapus sewa
       await tx.sewa.delete({
         where: { id }
       })
     })
 
-    // Catat ke Activity Log
     await createActivityLog({
       userId: user.id,
       modul: 'RENTAL',

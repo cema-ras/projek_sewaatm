@@ -83,10 +83,12 @@ model Pks {
 model Sewa {
   id          String   @id @default(cuid())
   pksId       String   @unique @map("id_pks")
-  nilaiSewa   Decimal  @map("nilai_sewa") @db.Decimal(15, 2)
-  tglMulai    DateTime @map("tgl_mulai")
+  nilaiSewa      Decimal  @map("nilai_sewa") @db.Decimal(15, 2)
+  totalNilaiSewa Decimal? @map("total_nilai_sewa") @db.Decimal(15, 2)
+  tglMulai       DateTime @map("tgl_mulai")
   tglBerakhir DateTime @map("tgl_berakhir")
   keterangan  String?
+  filePdf     String?  @map("file_pdf")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
