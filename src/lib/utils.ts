@@ -75,3 +75,52 @@ export const STATUS_KONTRAK_COLOR: Record<string, string> = {
   dipindahkan: 'bg-blue-100 text-blue-800',
   dihentikan: 'bg-red-100 text-red-800',
 }
+
+/** Membersihkan timestamp ID dari nama file (contoh: 1786166668334-dokumen.pdf -> dokumen.pdf) */
+export function getCleanFileName(filePathOrName: string): string {
+  if (!filePathOrName) return ''
+  const fileName = filePathOrName.split('/').pop() || filePathOrName
+  return fileName.replace(/^\d{10,14}-/, '')
+}
+
+/** Menyingkat nama file yang panjang dengan titik-titik (contoh: dokumen_kontrak_...pdf) */
+export function truncateFileName(filePathOrName: string, maxLength = 24): string {
+  if (!filePathOrName) return ''
+  const fileName = getCleanFileName(filePathOrName)
+  if (fileName.length <= maxLength) return fileName
+
+  const extIndex = fileName.lastIndexOf('.')
+  if (extIndex !== -1 && extIndex > fileName.length - 8) {
+    const ext = fileName.slice(extIndex)
+    const nameOnly = fileName.slice(0, extIndex)
+    const availableLen = maxLength - ext.length - 3
+    if (availableLen > 3) {
+      return `${nameOnly.slice(0, availableLen)}...${ext}`
+    }
+  }
+  return `${fileName.slice(0, maxLength - 3)}...`
+}
+
+/**
+ * Hitung total nilai sewa berdasarkan nilai sewa per tahun dikali durasi masa sewa (dalam tahun)
+ */
+export function hitungTotalNilaiSewa(
+  nilaiSewa: number,
+  tglMulai: Date | string,
+  tglBerakhir: Date | string
+): number {
+  if (!nilaiSewa || isNaN(nilaiSewa) || !tglMulai || !tglBerakhir) return 0
+  const mulai = new Date(tglMulai)
+  const berakhir = new Date(tglBerakhir)
+  const diffMs = berakhir.getTime() - mulai.getTime()
+  if (diffMs <= 0) return nilaiSewa
+
+  const diffHari = diffMs / (1000 * 60 * 60 * 24)
+  let rasioTahun = diffHari / 365
+  if (Math.abs(rasioTahun - Math.round(rasioTahun)) < 0.05) {
+    rasioTahun = Math.round(rasioTahun)
+  }
+  return Math.round(nilaiSewa * rasioTahun)
+}
+
+

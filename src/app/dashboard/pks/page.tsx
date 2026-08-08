@@ -214,7 +214,7 @@ export default function PksPage() {
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
             Perjanjian Kerja Sama (PKS)
@@ -223,12 +223,22 @@ export default function PksPage() {
             Kelola dokumen PKS legal sewa tempat penempatan ATM.
           </p>
         </div>
-        <Button
-          onClick={openAddModal}
-          className="self-start bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:self-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Tambah PKS
-        </Button>
+
+        {/* Container untuk Alert & Button */}
+        <div className="flex flex-col gap-3 self-start sm:flex-row sm:items-center lg:self-auto">
+          {/* Peringatan Kedip-Kedip */}
+          <div className="flex animate-pulse items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Isi Data ATM terlebih dahulu sebelum mengisi Data PKS</span>
+          </div>
+
+          <Button
+            onClick={openAddModal}
+            className="w-full bg-teal-600 text-white shadow-md shadow-teal-500/10 hover:bg-teal-700 active:scale-[0.98] sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Tambah PKS
+          </Button>
+        </div>
       </div>
 
       {/* Main card */}
@@ -352,7 +362,7 @@ export default function PksPage() {
 
           {/* Controls & Pagination Footer */}
           {!loading && pksList.length > 0 && (
-            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <span>Baris per halaman:</span>
@@ -375,7 +385,19 @@ export default function PksPage() {
                   </Select>
                 </div>
                 <span>
-                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{pksList.length}</strong> PKS
+                  Menampilkan{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {startIndex + 1}
+                  </strong>{' '}
+                  -{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {endIndex}
+                  </strong>{' '}
+                  dari{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {pksList.length}
+                  </strong>{' '}
+                  PKS
                 </span>
               </div>
 

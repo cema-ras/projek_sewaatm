@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
-import { hitungMasaSewa } from '@/lib/utils'
+import { hitungMasaSewa, hitungTotalNilaiSewa } from '@/lib/utils'
+import { saveUploadedPdf } from '@/lib/file-upload'
+import { StatusKontrak } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,15 +66,21 @@ export async function GET(request: Request) {
       },
     })
 
-    // Map data untuk menyertakan computed fields
+    // Map data untuk menyertakan computed fields, totalNilaiSewa, & filePdf
     const dataWithComputed = rentalList.map((item) => {
+      const computedTotal = item.totalNilaiSewa
+        ? Number(item.totalNilaiSewa)
+        : hitungTotalNilaiSewa(Number(item.nilaiSewa), item.tglMulai, item.tglBerakhir)
+
       return {
         id: item.id,
         pksId: item.pksId,
         nilaiSewa: Number(item.nilaiSewa),
+        totalNilaiSewa: computedTotal,
         tglMulai: item.tglMulai,
         tglBerakhir: item.tglBerakhir,
         keterangan: item.keterangan,
+        filePdf: item.filePdf,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         masaSewa: hitungMasaSewa(item.tglMulai, item.tglBerakhir), // Computed field
@@ -91,6 +99,7 @@ export async function GET(request: Request) {
 /**
  * POST /api/rental
  * Menambahkan kontrak sewa baru dan membuat monitoring kontrak awal
+ * Mendukung JSON & FormData (untuk upload file PDF)
  */
 export async function POST(request: Request) {
   try {
@@ -99,12 +108,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { pksId, nilaiSewa, tglMulai, tglBerakhir, keterangan, status = 'aktif' } = body
+    const contentType = request.headers.get('content-type') || ''
+
+    let pksId = ''
+    let nilaiSewa: number | string = 0
+    let tglMulai = ''
+    let tglBerakhir = ''
+    let keterangan: string | null = null
+    let status: StatusKontrak = 'aktif'
+    let filePdfPath: string | null = null
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      pksId = (formData.get('pksId') as string) || ''
+      nilaiSewa = (formData.get('nilaiSewa') as string) || 0
+      tglMulai = (formData.get('tglMulai') as string) || ''
+      tglBerakhir = (formData.get('tglBerakhir') as string) || ''
+      keterangan = (formData.get('keterangan') as string) || null
+      status = ((formData.get('status') as string) || 'aktif') as StatusKontrak
+
+      const file = formData.get('filePdf') as File | null
+      if (file && file.size > 0) {
+        filePdfPath = await saveUploadedPdf(file)
+      }
+    } else {
+      const body = await request.json()
+      pksId = body.pksId
+      nilaiSewa = body.nilaiSewa
+      tglMulai = body.tglMulai
+      tglBerakhir = body.tglBerakhir
+      keterangan = body.keterangan || null
+      status = (body.status || 'aktif') as StatusKontrak
+    }
 
     if (!pksId || !nilaiSewa || !tglMulai || !tglBerakhir) {
       return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
     }
+
+    const computedTotal = hitungTotalNilaiSewa(Number(nilaiSewa), tglMulai, tglBerakhir)
 
     // Gunakan transaction untuk memastikan sewa dan monitoring_kontrak keduanya terbuat
     const newRental = await prisma.$transaction(async (tx) => {
@@ -112,10 +153,12 @@ export async function POST(request: Request) {
       const sewa = await tx.sewa.create({
         data: {
           pksId,
-          nilaiSewa,
+          nilaiSewa: Number(nilaiSewa),
+          totalNilaiSewa: computedTotal,
           tglMulai: new Date(tglMulai),
           tglBerakhir: new Date(tglBerakhir),
           keterangan: keterangan || null,
+          filePdf: filePdfPath,
         },
       })
 
@@ -141,6 +184,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: newRental, message: 'Kontrak sewa berhasil dibuat.' })
   } catch (error: unknown) {
     console.error('[API RENTAL POST] Gagal membuat Sewa:', error)
-    return NextResponse.json({ error: 'Gagal menambahkan kontrak sewa baru.' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Gagal menambahkan kontrak sewa baru.'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

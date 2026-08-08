@@ -6,25 +6,25 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table'
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
-import { 
-  Monitor, 
-  Search, 
-  Loader2, 
+import {
+  Monitor,
+  Search,
+  Loader2,
   X,
   AlertTriangle,
   Calendar,
@@ -36,7 +36,12 @@ import {
   ChevronsRight,
 } from 'lucide-react'
 import { Sewa, StatusKontrak } from '@/types'
-import { formatTanggal, hitungSisaHari, STATUS_KONTRAK_LABEL, STATUS_KONTRAK_COLOR } from '@/lib/utils'
+import {
+  formatTanggal,
+  hitungSisaHari,
+  STATUS_KONTRAK_LABEL,
+  STATUS_KONTRAK_COLOR,
+} from '@/lib/utils'
 
 export default function MonitoringPage() {
   const [rentals, setRentals] = useState<Sewa[]>([])
@@ -48,7 +53,7 @@ export default function MonitoringPage() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  
+
   // Status edit inline states
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
@@ -56,7 +61,9 @@ export default function MonitoringPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/rental${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`)
+      const res = await fetch(
+        `/api/rental${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`
+      )
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setRentals(json.data || [])
@@ -87,14 +94,18 @@ export default function MonitoringPage() {
           tglMulai: rentalData.tglMulai,
           tglBerakhir: rentalData.tglBerakhir,
           keterangan: rentalData.keterangan,
-          status: newStatus
-        })
+          status: newStatus,
+        }),
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      
+
       // Update local state directly
-      setRentals(prev => prev.map(item => item.id === rentalId ? { ...item, status: newStatus as StatusKontrak } : item))
+      setRentals((prev) =>
+        prev.map((item) =>
+          item.id === rentalId ? { ...item, status: newStatus as StatusKontrak } : item
+        )
+      )
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Gagal merubah status.')
     } finally {
@@ -103,7 +114,7 @@ export default function MonitoringPage() {
   }
 
   // Filter rentals by status client-side
-  const filteredRentals = rentals.filter(rental => {
+  const filteredRentals = rentals.filter((rental) => {
     if (statusFilter === 'all') return true
     return rental.status === statusFilter
   })
@@ -127,7 +138,7 @@ export default function MonitoringPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="animate-in fade-in space-y-6 duration-300">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -138,29 +149,29 @@ export default function MonitoringPage() {
             Pantau status kontrak, masa berlaku aktif, dan sisa hari sewa mesin ATM.
           </p>
         </div>
-        <Button 
+        <Button
           variant="outline"
           size="sm"
-          onClick={() => fetchRentals(search)} 
-          className="border-slate-200 hover:bg-slate-50 dark:border-slate-800 self-start sm:self-auto"
+          onClick={() => fetchRentals(search)}
+          className="self-start border-slate-200 hover:bg-slate-50 sm:self-auto dark:border-slate-800"
         >
           <RefreshCw className="mr-2 h-4 w-4" /> Refresh Data
         </Button>
       </div>
 
       {/* Filter and search controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <div className="relative w-full sm:w-72">
           <Search className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Cari PKS, kode ATM..."
-            className="pl-9 h-9"
+            className="h-9 pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button 
+            <button
               onClick={() => setSearch('')}
               className="absolute top-2.5 right-3 text-slate-400 hover:text-slate-600"
             >
@@ -170,19 +181,24 @@ export default function MonitoringPage() {
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
-          <Label className="text-slate-500 shrink-0 text-xs font-semibold uppercase">Status:</Label>
+        <div className="flex w-full items-center gap-2 self-start sm:w-auto sm:self-auto">
+          <Label className="shrink-0 text-xs font-semibold text-slate-500 uppercase">Status:</Label>
           <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'all')}>
-            <SelectTrigger className="w-full sm:w-48 h-9">
-              <SelectValue placeholder="Pilih status..." />
+            <SelectTrigger className="h-9 w-full sm:w-48">
+              <SelectValue placeholder="Pilih status...">
+                {statusFilter === 'all'
+                  ? 'Semua Status'
+                  : (STATUS_KONTRAK_LABEL as Record<string, string>)[statusFilter] ||
+                    'Pilih status...'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Status</SelectItem>
-              <SelectItem value="aktif">Aktif</SelectItem>
-              <SelectItem value="tidak_aktif">Tidak Aktif</SelectItem>
-              <SelectItem value="dalam_pemeliharaan">Dalam Pemeliharaan</SelectItem>
-              <SelectItem value="dipindahkan">Dipindahkan</SelectItem>
-              <SelectItem value="dihentikan">Dihentikan</SelectItem>
+              {Object.entries(STATUS_KONTRAK_LABEL).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {String(label)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -191,7 +207,7 @@ export default function MonitoringPage() {
       {/* Main card */}
       <Card className="border-slate-200 shadow-sm dark:border-slate-800">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-bold">
             <Monitor className="h-4 w-4 text-teal-600" />
             Real-time Monitoring
           </CardTitle>
@@ -212,7 +228,7 @@ export default function MonitoringPage() {
             </div>
           ) : filteredRentals.length === 0 ? (
             <div className="flex h-60 flex-col items-center justify-center text-slate-400">
-              <Monitor className="h-10 w-10 text-slate-300 mb-2" />
+              <Monitor className="mb-2 h-10 w-10 text-slate-300" />
               <p className="text-sm font-medium">Tidak ada kontrak dalam kriteria filter ini.</p>
             </div>
           ) : (
@@ -220,69 +236,99 @@ export default function MonitoringPage() {
               <Table>
                 <TableHeader className="bg-slate-50/55 dark:bg-slate-900/30">
                   <TableRow>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Nomor PKS</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">ATM & Lokasi</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Tanggal Berakhir</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Sisa Hari</TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">Status Kontrak</TableHead>
-                    <TableHead className="font-semibold text-right text-slate-600 dark:text-slate-400">Ubah Status</TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Nomor PKS
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      ATM & Lokasi
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Tanggal Berakhir
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Sisa Hari
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Status Kontrak
+                    </TableHead>
+                    <TableHead className="text-right font-semibold text-slate-600 dark:text-slate-400">
+                      Ubah Status
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedRentals.map((rental) => {
                     const sisa = hitungSisaHari(rental.tglBerakhir)
                     return (
-                      <TableRow key={rental.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                      <TableRow
+                        key={rental.id}
+                        className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10"
+                      >
                         <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
                           {rental.pks?.nomorPks || '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-bold text-teal-600 text-xs uppercase">
+                            <span className="text-xs font-bold text-teal-600 uppercase">
                               {rental.pks?.atm?.kodeAtm || 'N/A'}
                             </span>
-                            <span className="text-xs text-slate-500 font-medium truncate max-w-48">
+                            <span className="max-w-48 truncate text-xs font-medium text-slate-500">
                               {rental.pks?.atm?.lokasi || '-'}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1.5 text-xs font-semibold">
-                            <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                             {formatTanggal(rental.tglBerakhir)}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`font-bold border px-2.5 py-0.5 ${getSisaHariBadge(sisa)}`}>
-                            <Clock className="h-3 w-3 mr-1 shrink-0" />
+                          <Badge
+                            variant="outline"
+                            className={`border px-2.5 py-0.5 font-bold ${getSisaHariBadge(sisa)}`}
+                          >
+                            <Clock className="mr-1 h-3 w-3 shrink-0" />
                             {sisa < 0 ? `Lewat ${Math.abs(sisa)} hari` : `${sisa} hari lagi`}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            STATUS_KONTRAK_COLOR[rental.status || 'aktif']
-                          }`}>
-                            {STATUS_KONTRAK_LABEL[rental.status || 'aktif']}
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
+                              STATUS_KONTRAK_COLOR[rental.status || 'aktif']
+                            }`}
+                          >
+                            {STATUS_KONTRAK_LABEL[
+                              rental.status as keyof typeof STATUS_KONTRAK_LABEL
+                            ] || 'Aktif'}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end items-center">
+                          <div className="flex items-center justify-end">
                             {updatingId === rental.id ? (
                               <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
                             ) : (
                               <Select
                                 value={rental.status || 'aktif'}
-                                onValueChange={(val) => handleStatusChange(rental.id, val || 'aktif', rental)}
+                                onValueChange={(val) =>
+                                  handleStatusChange(rental.id, val || 'aktif', rental)
+                                }
                               >
-                                <SelectTrigger className="w-36 h-8 text-xs font-medium">
-                                  <SelectValue />
+                                <SelectTrigger className="h-8 w-36 text-xs font-medium">
+                                  <SelectValue>
+                                    {
+                                      (STATUS_KONTRAK_LABEL as Record<string, string>)[
+                                        rental.status || 'aktif'
+                                      ]
+                                    }
+                                  </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent className="text-xs">
-                                  <SelectItem value="aktif">Aktif</SelectItem>
-                                  <SelectItem value="tidak_aktif">Tidak Aktif</SelectItem>
-                                  <SelectItem value="dalam_pemeliharaan">Dalam Pemeliharaan</SelectItem>
-                                  <SelectItem value="dipindahkan">Dipindahkan</SelectItem>
-                                  <SelectItem value="dihentikan">Dihentikan</SelectItem>
+                                  {Object.entries(STATUS_KONTRAK_LABEL).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {String(label)}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             )}
@@ -298,7 +344,7 @@ export default function MonitoringPage() {
 
           {/* Controls & Pagination Footer */}
           {!loading && filteredRentals.length > 0 && (
-            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <span>Baris per halaman:</span>
@@ -321,7 +367,19 @@ export default function MonitoringPage() {
                   </Select>
                 </div>
                 <span>
-                  Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredRentals.length}</strong> Kontrak
+                  Menampilkan{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {startIndex + 1}
+                  </strong>{' '}
+                  -{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {endIndex}
+                  </strong>{' '}
+                  dari{' '}
+                  <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                    {filteredRentals.length}
+                  </strong>{' '}
+                  Kontrak
                 </span>
               </div>
 

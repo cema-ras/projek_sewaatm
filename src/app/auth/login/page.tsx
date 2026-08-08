@@ -3,7 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -12,7 +19,7 @@ import { KeyRound, Mail, AlertCircle, Building2 } from 'lucide-react'
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
-  
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -57,7 +64,7 @@ export default function LoginPage() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-              BNI ATM Rental
+              BNI ATM
             </CardTitle>
             <CardDescription className="text-slate-500 dark:text-slate-400">
               Silakan login untuk mengelola kontrak sewa ATM
@@ -72,9 +79,11 @@ export default function LoginPage() {
                 <p>{error}</p>
               </div>
             )}
-            
+
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
+                Email
+              </Label>
               <div className="relative">
                 <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
                 <Input
@@ -90,7 +99,9 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
+                Password
+              </Label>
               <div className="relative">
                 <KeyRound className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
                 <Input
@@ -108,7 +119,7 @@ export default function LoginPage() {
           <CardFooter>
             <Button
               type="submit"
-              className="w-full bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-md shadow-teal-500/20 active:scale-[0.98]"
+              className="w-full bg-teal-600 text-white shadow-md shadow-teal-500/20 transition-all hover:bg-teal-700 active:scale-[0.98]"
               disabled={loading}
             >
               {loading ? 'Memproses...' : 'Masuk'}

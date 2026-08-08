@@ -56,9 +56,11 @@ export interface Sewa {
   id: string
   pksId: string
   nilaiSewa: number
+  totalNilaiSewa?: number | null
   tglMulai: Date
   tglBerakhir: Date
   keterangan?: string | null
+  filePdf?: string | null
   createdAt: Date
   updatedAt: Date
   // Computed fields (tidak dari DB):
