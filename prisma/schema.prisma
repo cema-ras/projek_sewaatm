@@ -71,6 +71,7 @@ model Pks {
   atmId      String   @map("id_atm")
   nomorPks   String   @map("nomor_pks")
   tanggalPks DateTime @map("tanggal_pks")
+  filePdf    String?  @map("file_pdf")
   isDeleted  Boolean  @default(false) @map("is_deleted")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -90,7 +91,6 @@ model Sewa {
   tglMulai       DateTime @map("tgl_mulai")
   tglBerakhir DateTime @map("tgl_berakhir")
   keterangan  String?
-  filePdf     String?  @map("file_pdf")
   isDeleted   Boolean  @default(false) @map("is_deleted")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

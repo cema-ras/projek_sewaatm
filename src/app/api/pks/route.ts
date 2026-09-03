@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
+import { saveUploadedPdf } from '@/lib/file-upload'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/pks
- * Menambahkan data PKS baru
+ * Menambahkan data PKS baru (Mendukung JSON & FormData untuk upload file PDF)
  */
 export async function POST(request: Request) {
   try {
@@ -70,8 +71,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { atmId, nomorPks, tanggalPks } = body
+    const contentType = request.headers.get('content-type') || ''
+
+    let atmId = ''
+    let nomorPks = ''
+    let tanggalPks = ''
+    let filePdfPath: string | null = null
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      atmId = (formData.get('atmId') as string) || ''
+      nomorPks = (formData.get('nomorPks') as string) || ''
+      tanggalPks = (formData.get('tanggalPks') as string) || ''
+
+      const file = formData.get('filePdf') as File | null
+      if (file && file.size > 0) {
+        filePdfPath = await saveUploadedPdf(file)
+      }
+    } else {
+      const body = await request.json()
+      atmId = body.atmId
+      nomorPks = body.nomorPks
+      tanggalPks = body.tanggalPks
+    }
 
     if (!atmId || !nomorPks || !tanggalPks) {
       return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
@@ -83,6 +105,7 @@ export async function POST(request: Request) {
         atmId,
         nomorPks,
         tanggalPks: new Date(tanggalPks),
+        filePdf: filePdfPath,
         isDeleted: false,
       },
     })
@@ -98,6 +121,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: newPks, message: 'Data PKS berhasil ditambahkan.' })
   } catch (error: unknown) {
     console.error('[API PKS POST] Gagal membuat PKS:', error)
-    return NextResponse.json({ error: 'Gagal menambahkan PKS baru.' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Gagal menambahkan PKS baru.'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

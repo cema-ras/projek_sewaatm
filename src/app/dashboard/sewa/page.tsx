@@ -43,9 +43,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  FileText,
-  ExternalLink,
-  Upload,
 } from 'lucide-react'
 import { Sewa, Pks } from '@/types'
 import {
@@ -53,8 +50,6 @@ import {
   formatRupiah,
   STATUS_KONTRAK_LABEL,
   STATUS_KONTRAK_COLOR,
-  truncateFileName,
-  getCleanFileName,
   hitungTotalNilaiSewa,
 } from '@/lib/utils'
 
@@ -80,11 +75,6 @@ export default function RentalPage() {
   const [tglBerakhir, setTglBerakhir] = useState('')
   const [keterangan, setKeterangan] = useState('')
   const [status, setStatus] = useState('aktif')
-
-  // PDF states
-  const [pdfFile, setPdfFile] = useState<File | null>(null)
-  const [existingPdf, setExistingPdf] = useState<string | null>(null)
-  const [removePdf, setRemovePdf] = useState(false)
 
   const [saving, setSaving] = useState(false)
 
@@ -159,9 +149,6 @@ export default function RentalPage() {
     setTglBerakhir('')
     setKeterangan('')
     setStatus('aktif')
-    setPdfFile(null)
-    setExistingPdf(null)
-    setRemovePdf(false)
     setIsModalOpen(true)
   }
 
@@ -181,10 +168,6 @@ export default function RentalPage() {
     setTglMulai(startObj.toISOString().split('T')[0])
     setTglBerakhir(endObj.toISOString().split('T')[0])
 
-    setExistingPdf(rental.filePdf || null)
-    setPdfFile(null)
-    setRemovePdf(false)
-
     setIsModalOpen(true)
   }
 
@@ -201,24 +184,19 @@ export default function RentalPage() {
       const url = modalMode === 'add' ? '/api/rental' : `/api/rental/${selectedRentalId}`
       const method = modalMode === 'add' ? 'POST' : 'PUT'
 
-      const formData = new FormData()
-      formData.append('pksId', pksId)
-      formData.append('nilaiSewa', nilaiSewa.replace(/\./g, ''))
-      formData.append('tglMulai', tglMulai)
-      formData.append('tglBerakhir', tglBerakhir)
-      formData.append('keterangan', keterangan)
-      formData.append('status', status)
-
-      if (pdfFile) {
-        formData.append('filePdf', pdfFile)
-      }
-      if (removePdf) {
-        formData.append('removePdf', 'true')
+      const payload = {
+        pksId,
+        nilaiSewa: nilaiSewa.replace(/\./g, ''),
+        tglMulai,
+        tglBerakhir,
+        keterangan,
+        status,
       }
 
       const res = await fetch(url, {
         method,
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
 
@@ -269,8 +247,7 @@ export default function RentalPage() {
             Data Sewa
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Kelola transaksi nilai sewa, periode sewa, lampiran PDF, dan integrasi dengan dokumen
-            PKS ATM.
+            Kelola transaksi nilai sewa, periode sewa, dan integrasi dengan dokumen PKS ATM.
           </p>
         </div>
 
@@ -300,7 +277,7 @@ export default function RentalPage() {
               Kontrak Sewa
             </CardTitle>
             <CardDescription>
-              Integrasi nilai transaksi sewa, durasi kontrak, dan dokumen PDF.
+              Integrasi nilai transaksi sewa dan durasi kontrak.
             </CardDescription>
           </div>
           {/* Search bar */}
@@ -362,9 +339,6 @@ export default function RentalPage() {
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Total Nilai Sewa
-                    </TableHead>
-                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
-                      Dokumen PDF
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Status
@@ -439,23 +413,6 @@ export default function RentalPage() {
                               rental.tglMulai,
                               rental.tglBerakhir
                             )
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {rental.filePdf ? (
-                          <a
-                            href={rental.filePdf}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50/80 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60"
-                            title="Lihat / Download File PDF"
-                          >
-                            <FileText className="h-3.5 w-3.5 shrink-0" />
-                            <span>Dokumen</span>
-                            <ExternalLink className="h-3 w-3 opacity-70" />
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-400 dark:text-slate-600">-</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -719,88 +676,6 @@ export default function RentalPage() {
               </Select>
             </div>
 
-            {/* Field Upload PDF */}
-            <div className="space-y-2">
-              <Label htmlFor="pdfFile">Dokumen Kontrak PDF</Label>
-              {existingPdf && !removePdf ? (
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                  <div className="flex min-w-0 items-center gap-2 text-xs">
-                    <FileText className="h-4 w-4 shrink-0 text-red-500" />
-                    <span
-                      className="block max-w-[150px] truncate font-medium text-slate-700 sm:max-w-[220px] dark:text-slate-300"
-                      title={getCleanFileName(existingPdf)}
-                    >
-                      {truncateFileName(existingPdf, 22)}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <a
-                      href={existingPdf}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex h-7 items-center gap-1 rounded bg-teal-50 px-2 text-xs font-semibold text-teal-600 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-400"
-                    >
-                      <ExternalLink className="h-3 w-3" /> Lihat
-                    </a>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
-                      onClick={() => {
-                        setRemovePdf(true)
-                        setPdfFile(null)
-                      }}
-                    >
-                      <X className="mr-1 h-3.5 w-3.5" /> Hapus
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="pdfFile"
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          if (
-                            !file.type.includes('pdf') &&
-                            !file.name.toLowerCase().endsWith('.pdf')
-                          ) {
-                            alert('File harus berformat PDF.')
-                            e.target.value = ''
-                            return
-                          }
-                          setPdfFile(file)
-                          setRemovePdf(false)
-                        }
-                      }}
-                      className="cursor-pointer text-xs"
-                    />
-                  </div>
-                  {pdfFile && (
-                    <div className="flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1 text-xs text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">
-                      <span className="max-w-[200px] truncate font-medium" title={pdfFile.name}>
-                        Akan diupload: {truncateFileName(pdfFile.name, 22)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPdfFile(null)}
-                        className="ml-2 text-slate-400 hover:text-red-500"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Format file: PDF (Maksimal 10MB)
-                  </p>
-                </div>
-              )}
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="keterangan">Keterangan / Memo</Label>

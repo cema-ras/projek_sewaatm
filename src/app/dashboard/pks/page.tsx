@@ -43,9 +43,11 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
+  ExternalLink,
 } from 'lucide-react'
 import { Pks, Atm } from '@/types'
-import { formatTanggal } from '@/lib/utils'
+import { formatTanggal, truncateFileName, getCleanFileName } from '@/lib/utils'
 
 export default function PksPage() {
   const [pksList, setPksList] = useState<Pks[]>([])
@@ -67,6 +69,12 @@ export default function PksPage() {
   const [kodeATM, setKodeATM] = useState('')
   const [nomorPks, setNomorPks] = useState('')
   const [tanggalPks, setTanggalPks] = useState('')
+
+  // PDF states
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [existingPdf, setExistingPdf] = useState<string | null>(null)
+  const [removePdf, setRemovePdf] = useState(false)
+
   const [saving, setSaving] = useState(false)
 
   // Delete states
@@ -129,6 +137,9 @@ export default function PksPage() {
     setKodeATM('')
     setNomorPks('')
     setTanggalPks('')
+    setPdfFile(null)
+    setExistingPdf(null)
+    setRemovePdf(false)
     setIsModalOpen(true)
   }
 
@@ -144,6 +155,10 @@ export default function PksPage() {
     const formattedDate = dateObj.toISOString().split('T')[0]
     setTanggalPks(formattedDate)
 
+    setExistingPdf(pks.filePdf || null)
+    setPdfFile(null)
+    setRemovePdf(false)
+
     setIsModalOpen(true)
   }
 
@@ -155,21 +170,27 @@ export default function PksPage() {
     }
 
     setSaving(true)
-    const payload = {
-      atmId,
-      kodeATM,
-      nomorPks,
-      tanggalPks,
-    }
 
     try {
       const url = modalMode === 'add' ? '/api/pks' : `/api/pks/${selectedPksId}`
       const method = modalMode === 'add' ? 'POST' : 'PUT'
 
+      const formData = new FormData()
+      formData.append('atmId', atmId)
+      formData.append('kodeATM', kodeATM)
+      formData.append('nomorPks', nomorPks)
+      formData.append('tanggalPks', tanggalPks)
+
+      if (pdfFile) {
+        formData.append('filePdf', pdfFile)
+      }
+      if (removePdf) {
+        formData.append('removePdf', 'true')
+      }
+
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
       })
       const json = await res.json()
 
@@ -220,7 +241,7 @@ export default function PksPage() {
             Perjanjian Kerja Sama (PKS)
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Kelola dokumen PKS legal sewa tempat penempatan ATM.
+            Kelola dokumen PKS legal sewa tempat penempatan ATM dan lampiran PDF.
           </p>
         </div>
 
@@ -305,6 +326,9 @@ export default function PksPage() {
                     <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
                       Tanggal Dokumen
                     </TableHead>
+                    <TableHead className="font-semibold text-slate-600 dark:text-slate-400">
+                      Dokumen PDF
+                    </TableHead>
                     <TableHead className="text-right font-semibold text-slate-600 dark:text-slate-400">
                       Aksi
                     </TableHead>
@@ -339,6 +363,23 @@ export default function PksPage() {
                           <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                           {formatTanggal(pks.tanggalPks)}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {pks.filePdf ? (
+                          <a
+                            href={pks.filePdf}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50/80 px-2.5 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60"
+                            title="Lihat / Download File PDF"
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0" />
+                            <span>Dokumen</span>
+                            <ExternalLink className="h-3 w-3 opacity-70" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-600">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -462,7 +503,7 @@ export default function PksPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {modalMode === 'add' ? 'Tambah Dokumen PKS' : 'Edit Dokumen PKS'}
@@ -527,6 +568,89 @@ export default function PksPage() {
                 onChange={(e) => setTanggalPks(e.target.value)}
                 required
               />
+            </div>
+
+            {/* Field Upload PDF */}
+            <div className="space-y-2">
+              <Label htmlFor="pdfFile">Dokumen PKS PDF</Label>
+              {existingPdf && !removePdf ? (
+                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex min-w-0 items-center gap-2 text-xs">
+                    <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                    <span
+                      className="block max-w-[150px] truncate font-medium text-slate-700 sm:max-w-[220px] dark:text-slate-300"
+                      title={getCleanFileName(existingPdf)}
+                    >
+                      {truncateFileName(existingPdf, 22)}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <a
+                      href={existingPdf}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-7 items-center gap-1 rounded bg-teal-50 px-2 text-xs font-semibold text-teal-600 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-400"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Lihat
+                    </a>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                      onClick={() => {
+                        setRemovePdf(true)
+                        setPdfFile(null)
+                      }}
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" /> Hapus
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pdfFile"
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          if (
+                            !file.type.includes('pdf') &&
+                            !file.name.toLowerCase().endsWith('.pdf')
+                          ) {
+                            alert('File harus berformat PDF.')
+                            e.target.value = ''
+                            return
+                          }
+                          setPdfFile(file)
+                          setRemovePdf(false)
+                        }
+                      }}
+                      className="cursor-pointer text-xs"
+                    />
+                  </div>
+                  {pdfFile && (
+                    <div className="flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1 text-xs text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">
+                      <span className="max-w-[200px] truncate font-medium" title={pdfFile.name}>
+                        Akan diupload: {truncateFileName(pdfFile.name, 22)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPdfFile(null)}
+                        className="ml-2 text-slate-400 hover:text-red-500"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Format file: PDF (Maksimal 10MB)
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="border-t border-slate-100 pt-4 dark:border-slate-800">
