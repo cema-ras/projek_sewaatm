@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
+import { saveUploadedPdf, deleteUploadedFile } from '@/lib/file-upload'
 
 /**
  * PUT /api/pks/[id]
- * Mengubah data PKS yang ada
+ * Mengubah data PKS yang ada (Mendukung JSON & FormData untuk update/hapus file PDF)
  */
 export async function PUT(
   request: Request,
@@ -18,12 +19,6 @@ export async function PUT(
     }
 
     const { id } = await params
-    const body = await request.json()
-    const { atmId, nomorPks, tanggalPks } = body
-
-    if (!atmId || !nomorPks || !tanggalPks) {
-      return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
-    }
 
     // Ambil data sebelum diubah untuk log
     const oldPks = await prisma.pks.findFirst({
@@ -34,6 +29,50 @@ export async function PUT(
       return NextResponse.json({ error: 'Data PKS tidak ditemukan.' }, { status: 404 })
     }
 
+    const contentType = request.headers.get('content-type') || ''
+
+    let atmId = oldPks.atmId
+    let nomorPks = oldPks.nomorPks
+    let tanggalPks = oldPks.tanggalPks.toISOString()
+    let finalFilePdf: string | null = oldPks.filePdf
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      atmId = (formData.get('atmId') as string) || atmId
+      nomorPks = (formData.get('nomorPks') as string) || nomorPks
+      tanggalPks = (formData.get('tanggalPks') as string) || tanggalPks
+
+      const removePdf = formData.get('removePdf') === 'true'
+      const file = formData.get('filePdf') as File | null
+
+      if (file && file.size > 0) {
+        if (oldPks.filePdf) {
+          await deleteUploadedFile(oldPks.filePdf)
+        }
+        finalFilePdf = await saveUploadedPdf(file)
+      } else if (removePdf) {
+        if (oldPks.filePdf) {
+          await deleteUploadedFile(oldPks.filePdf)
+        }
+        finalFilePdf = null
+      }
+    } else {
+      const body = await request.json()
+      atmId = body.atmId ?? atmId
+      nomorPks = body.nomorPks ?? nomorPks
+      tanggalPks = body.tanggalPks ?? tanggalPks
+      if (body.removePdf) {
+        if (oldPks.filePdf) {
+          await deleteUploadedFile(oldPks.filePdf)
+        }
+        finalFilePdf = null
+      }
+    }
+
+    if (!atmId || !nomorPks || !tanggalPks) {
+      return NextResponse.json({ error: 'Field penting tidak boleh kosong.' }, { status: 400 })
+    }
+
     // Lakukan update
     const updatedPks = await prisma.pks.update({
       where: { id },
@@ -41,6 +80,7 @@ export async function PUT(
         atmId,
         nomorPks,
         tanggalPks: new Date(tanggalPks),
+        filePdf: finalFilePdf,
       },
     })
 
@@ -56,7 +96,8 @@ export async function PUT(
     return NextResponse.json({ data: updatedPks, message: 'Data PKS berhasil diubah.' })
   } catch (error: unknown) {
     console.error('[API PKS PUT] Gagal mengubah PKS:', error)
-    return NextResponse.json({ error: 'Gagal mengubah data PKS.' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Gagal mengubah data PKS.'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 

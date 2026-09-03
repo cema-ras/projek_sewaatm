@@ -47,6 +47,7 @@ export interface Pks {
   atmId: string
   nomorPks: string
   tanggalPks: Date
+  filePdf?: string | null
   isDeleted?: boolean
   createdAt: Date
   updatedAt: Date
@@ -62,7 +63,6 @@ export interface Sewa {
   tglMulai: Date
   tglBerakhir: Date
   keterangan?: string | null
-  filePdf?: string | null
   isDeleted?: boolean
   createdAt: Date
   updatedAt: Date

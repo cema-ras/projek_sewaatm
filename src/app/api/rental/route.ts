@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUserProfile } from '@/services/auth-user'
 import { createActivityLog } from '@/services/activity-log'
 import { hitungMasaSewa, hitungTotalNilaiSewa } from '@/lib/utils'
-import { saveUploadedPdf } from '@/lib/file-upload'
 import { StatusKontrak } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +58,7 @@ export async function GET(request: Request) {
           select: {
             id: true,
             nomorPks: true,
+            filePdf: true,
             isDeleted: true,
             atm: {
               select: {
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
       },
     })
 
-    // Map data untuk menyertakan computed fields, totalNilaiSewa, & filePdf
+    // Map data untuk menyertakan computed fields & totalNilaiSewa
     const dataWithComputed = rentalList.map((item) => {
       const computedTotal = item.totalNilaiSewa
         ? Number(item.totalNilaiSewa)
@@ -88,7 +88,6 @@ export async function GET(request: Request) {
         tglMulai: item.tglMulai,
         tglBerakhir: item.tglBerakhir,
         keterangan: item.keterangan,
-        filePdf: item.filePdf,
         isDeleted: item.isDeleted,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
@@ -108,7 +107,7 @@ export async function GET(request: Request) {
 /**
  * POST /api/rental
  * Menambahkan kontrak sewa baru dan membuat monitoring kontrak awal
- * Mendukung JSON & FormData (untuk upload file PDF)
+ * Mendukung JSON & FormData
  */
 export async function POST(request: Request) {
   try {
@@ -125,7 +124,6 @@ export async function POST(request: Request) {
     let tglBerakhir = ''
     let keterangan: string | null = null
     let status: StatusKontrak = 'aktif'
-    let filePdfPath: string | null = null
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
@@ -135,11 +133,6 @@ export async function POST(request: Request) {
       tglBerakhir = (formData.get('tglBerakhir') as string) || ''
       keterangan = (formData.get('keterangan') as string) || null
       status = ((formData.get('status') as string) || 'aktif') as StatusKontrak
-
-      const file = formData.get('filePdf') as File | null
-      if (file && file.size > 0) {
-        filePdfPath = await saveUploadedPdf(file)
-      }
     } else {
       const body = await request.json()
       pksId = body.pksId
@@ -167,7 +160,6 @@ export async function POST(request: Request) {
           tglMulai: new Date(tglMulai),
           tglBerakhir: new Date(tglBerakhir),
           keterangan: keterangan || null,
-          filePdf: filePdfPath,
           isDeleted: false,
         },
       })
