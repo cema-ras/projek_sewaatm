@@ -83,9 +83,85 @@ export default function LogsAdminPage() {
     setIsModalOpen(true)
   }
 
-  const formatJSON = (data: unknown) => {
-    if (!data) return 'Tidak ada data'
-    return JSON.stringify(data, null, 2)
+  const renderReadableData = (data: unknown) => {
+    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+      return <div className="text-sm italic text-slate-500 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">Tidak ada data.</div>
+    }
+
+    const formatKey = (key: string) => {
+      const keyMap: Record<string, string> = {
+        id: 'ID',
+        createdAt: 'Dibuat Pada',
+        updatedAt: 'Diubah Pada',
+        isDeleted: 'Dihapus?',
+        nomorPks: 'Nomor PKS',
+        tanggalPks: 'Tanggal PKS',
+        filePdf: 'File PDF',
+        atmId: 'ID ATM',
+        userId: 'ID User',
+        kodeAtm: 'Kode ATM',
+        lokasi: 'Lokasi ATM',
+        cabangPengelola: 'Cabang Pengelola',
+        nilaiSewa: 'Nilai Sewa',
+        tglMulai: 'Tanggal Mulai',
+        tglBerakhir: 'Tanggal Berakhir',
+        status: 'Status',
+        keterangan: 'Keterangan',
+        nama: 'Nama User',
+        email: 'Email User',
+        role: 'Peran User',
+        jenisMesin: 'Jenis Mesin'
+      }
+      if (keyMap[key]) return keyMap[key]
+
+      const result = key.replace(/([A-Z])/g, " $1")
+      return result.charAt(0).toUpperCase() + result.slice(1)
+    }
+
+    const formatValue = (key: string, value: any) => {
+      if (value === null || value === undefined) return '-'
+      if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak'
+      
+      if (typeof value === 'string' && (key.toLowerCase().includes('tanggal') || key.toLowerCase().includes('tgl') || key.toLowerCase().includes('at'))) {
+        const d = new Date(value)
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB'
+        }
+      }
+
+      if (key.toLowerCase().includes('file') && typeof value === 'string' && value.startsWith('http')) {
+        return (
+          <a href={value} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">
+            Buka File Dokumen &rarr;
+          </a>
+        )
+      }
+
+      if (key.toLowerCase().includes('nilai') && (typeof value === 'number' || !isNaN(Number(value)))) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(value))
+      }
+
+      return String(value)
+    }
+
+    return (
+      <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden bg-white dark:bg-slate-950">
+        <Table>
+          <TableBody>
+            {Object.entries(data as Record<string, any>).map(([key, value]) => (
+              <TableRow key={key}>
+                <TableCell className="font-semibold text-xs bg-slate-50/50 dark:bg-slate-900/50 w-1/3 py-2 align-top text-slate-600 dark:text-slate-400">
+                  {formatKey(key)}
+                </TableCell>
+                <TableCell className="text-xs py-2 break-all text-slate-800 dark:text-slate-200 font-medium">
+                  {formatValue(key, value)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
   }
 
   if (error && error.includes('Akses Ditolak')) {
@@ -256,24 +332,24 @@ export default function LogsAdminPage() {
           
           <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
             {/* Data Sebelum */}
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                Data Sebelum Perubahan (Before):
-              </Label>
-              <pre className="text-[11px] p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-x-auto font-mono max-h-52">
-                {formatJSON(selectedLog?.dataSebelum)}
-              </pre>
-            </div>
+            {selectedLog?.dataSebelum && (
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                  Data Sebelum Perubahan (Before):
+                </Label>
+                {renderReadableData(selectedLog.dataSebelum)}
+              </div>
+            )}
 
             {/* Data Setelah */}
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                Data Setelah Perubahan (After):
-              </Label>
-              <pre className="text-[11px] p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-x-auto font-mono max-h-52">
-                {formatJSON(selectedLog?.dataSetelah)}
-              </pre>
-            </div>
+            {selectedLog?.dataSetelah && (
+              <div className={selectedLog?.dataSebelum ? "mt-4" : ""}>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                  Data Setelah Perubahan (After):
+                </Label>
+                {renderReadableData(selectedLog.dataSetelah)}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

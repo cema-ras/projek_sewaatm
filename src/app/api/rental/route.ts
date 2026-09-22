@@ -66,6 +66,7 @@ export async function GET(request: Request) {
                 kodeAtm: true,
                 lokasi: true,
                 branch: true,
+                cabangPengelola: true,
                 isDeleted: true,
               },
             },
