@@ -576,7 +576,17 @@ export default function RentalPage() {
 
                 <SelectContent className="max-h-56">
                   {pksList
-                    .filter((pks) => (!pks.isDeleted && !pks.atm?.isDeleted) || pks.id === pksId)
+                    .filter((pks) => {
+                      const isNotDeleted = !pks.isDeleted && !pks.atm?.isDeleted;
+                      const hasActiveSewa = pks.sewa && !pks.sewa.isDeleted;
+                      
+                      if (modalMode === 'add') {
+                        return isNotDeleted && !hasActiveSewa;
+                      } else {
+                        // Allow if it's the currently selected PKS, or if it has no active sewa
+                        return (isNotDeleted && !hasActiveSewa) || pks.id === pksId;
+                      }
+                    })
                     .map((pks) => (
                       <SelectItem key={pks.id} value={pks.id}>
                         {pks.nomorPks} (ATM: {pks.atm?.kodeAtm || '-'})
@@ -584,8 +594,13 @@ export default function RentalPage() {
                       </SelectItem>
                     ))}
 
-                  {pksList.filter((pks) => !pks.isDeleted && !pks.atm?.isDeleted).length === 0 && (
+                  {pksList.filter((pks) => !pks.isDeleted && !pks.atm?.isDeleted && (!pks.sewa || pks.sewa.isDeleted)).length === 0 && modalMode === 'add' && (
                     <SelectItem value="none" disabled>
+                      Semua PKS sudah memiliki kontrak sewa.
+                    </SelectItem>
+                  )}
+                  {pksList.length === 0 && (
+                    <SelectItem value="empty" disabled>
                       Tidak ada PKS terdaftar. Silakan buat PKS terlebih dahulu.
                     </SelectItem>
                   )}

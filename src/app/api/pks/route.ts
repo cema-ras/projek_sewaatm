@@ -50,6 +50,12 @@ export async function GET(request: Request) {
             isDeleted: true,
           },
         },
+        sewa: {
+          select: {
+            id: true,
+            isDeleted: true,
+          }
+        },
       },
     })
 

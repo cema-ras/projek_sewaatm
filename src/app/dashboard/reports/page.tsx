@@ -119,7 +119,7 @@ export default function ReportsPage() {
       `"${item.pks?.nomorPks || ''}"`,
       `"${item.pks?.atm?.kodeAtm || ''}"`,
       `"${item.pks?.atm?.lokasi || ''}"`,
-      `"${item.pks?.atm?.branch || ''}"`,
+      `"${item.pks?.atm?.cabangPengelola || ''}"`,
       item.nilaiSewa,
       `"${new Date(item.tglMulai).toLocaleDateString('id-ID')}"`,
       `"${new Date(item.tglBerakhir).toLocaleDateString('id-ID')}"`,
@@ -152,6 +152,10 @@ export default function ReportsPage() {
       {/* Print-only CSS block */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: landscape;
+            margin: 10mm;
+          }
           body * {
             visibility: hidden;
           }
@@ -166,6 +170,17 @@ export default function ReportsPage() {
           }
           .no-print {
             display: none !important;
+          }
+          /* Force table to wrap and show all columns in print */
+          div[data-slot="table-container"] {
+            overflow: visible !important;
+          }
+          th, td {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            font-size: 10px !important;
+            padding: 4px !important;
+            color: black !important;
           }
         }
       `}</style>
@@ -308,117 +323,156 @@ export default function ReportsPage() {
               </div>
             ) : (
               <div>
-                <Table>
-                  <TableHeader className="bg-slate-50/55 dark:bg-slate-900/30">
-                    <TableRow>
-                      <TableHead className="font-semibold">Nomor PKS</TableHead>
-                      <TableHead className="font-semibold">ATM</TableHead>
-                      <TableHead className="font-semibold">Lokasi ATM</TableHead>
-                      <TableHead className="font-semibold">Cabang</TableHead>
-                      <TableHead className="font-semibold">Nilai Sewa</TableHead>
-                      <TableHead className="font-semibold">Mulai</TableHead>
-                      <TableHead className="font-semibold">Berakhir</TableHead>
-                      <TableHead className="font-semibold">Masa Sewa</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedRentals.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-semibold">{item.pks?.nomorPks || '-'}</TableCell>
-                        <TableCell className="font-bold text-teal-700 dark:text-teal-400">{item.pks?.atm?.kodeAtm || 'N/A'}</TableCell>
-                        <TableCell className="font-medium">{item.pks?.atm?.lokasi || '-'}</TableCell>
-                        <TableCell>{item.pks?.atm?.branch || '-'}</TableCell>
-                        <TableCell className="font-bold">{formatRupiah(item.nilaiSewa)}</TableCell>
-                        <TableCell className="text-xs">{formatTanggal(item.tglMulai)}</TableCell>
-                        <TableCell className="text-xs">{formatTanggal(item.tglBerakhir)}</TableCell>
-                        <TableCell className="text-xs">{item.masaSewa}</TableCell>
-                        <TableCell>
-                          <span className="text-xs font-semibold uppercase">{STATUS_KONTRAK_LABEL[item.status || 'aktif']}</span>
-                        </TableCell>
+                {/* 1. Screen View (with pagination) */}
+                <div className="no-print">
+                  <Table>
+                    <TableHeader className="bg-slate-50/55 dark:bg-slate-900/30">
+                      <TableRow>
+                        <TableHead className="font-semibold">Nomor PKS</TableHead>
+                        <TableHead className="font-semibold">ATM</TableHead>
+                        <TableHead className="font-semibold">Lokasi ATM</TableHead>
+                        <TableHead className="font-semibold">Cabang</TableHead>
+                        <TableHead className="font-semibold">Nilai Sewa</TableHead>
+                        <TableHead className="font-semibold">Mulai</TableHead>
+                        <TableHead className="font-semibold">Berakhir</TableHead>
+                        <TableHead className="font-semibold">Masa Sewa</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedRentals.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-semibold">{item.pks?.nomorPks || '-'}</TableCell>
+                          <TableCell className="font-bold text-teal-700 dark:text-teal-400">{item.pks?.atm?.kodeAtm || 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{item.pks?.atm?.lokasi || '-'}</TableCell>
+                          <TableCell>{item.pks?.atm?.cabangPengelola || '-'}</TableCell>
+                          <TableCell className="font-bold">{formatRupiah(item.nilaiSewa)}</TableCell>
+                          <TableCell className="text-xs">{formatTanggal(item.tglMulai)}</TableCell>
+                          <TableCell className="text-xs">{formatTanggal(item.tglBerakhir)}</TableCell>
+                          <TableCell className="text-xs">{item.masaSewa}</TableCell>
+                          <TableCell>
+                            <span className="text-xs font-semibold uppercase">{STATUS_KONTRAK_LABEL[item.status || 'aktif']}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
 
-                {/* Controls & Pagination Footer */}
-                {!loading && filteredRentals.length > 0 && (
-                  <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between no-print">
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-2">
-                        <span>Baris per halaman:</span>
-                        <Select
-                          value={pageSize.toString()}
-                          onValueChange={(val) => {
-                            setPageSize(Number(val))
-                            setCurrentPage(1)
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-16 text-xs">
-                            <SelectValue placeholder={pageSize.toString()} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5</SelectItem>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  {/* Controls & Pagination Footer */}
+                  {!loading && filteredRentals.length > 0 && (
+                    <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between no-print">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-2">
+                          <span>Baris per halaman:</span>
+                          <Select
+                            value={pageSize.toString()}
+                            onValueChange={(val) => {
+                              setPageSize(Number(val))
+                              setCurrentPage(1)
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-16 text-xs">
+                              <SelectValue placeholder={pageSize.toString()} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5</SelectItem>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="25">25</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <span>
+                          Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredRentals.length}</strong> Laporan
+                        </span>
                       </div>
-                      <span>
-                        Menampilkan <strong className="font-semibold text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="font-semibold text-slate-800 dark:text-slate-200">{endIndex}</strong> dari <strong className="font-semibold text-slate-800 dark:text-slate-200">{filteredRentals.length}</strong> Laporan
-                      </span>
+
+                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setCurrentPage(1)}
+                          disabled={validCurrentPage === 1}
+                          title="Halaman Pertama"
+                        >
+                          <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                          disabled={validCurrentPage === 1}
+                          title="Halaman Sebelumnya"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                          Halaman {validCurrentPage} dari {totalPages}
+                        </span>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                          disabled={validCurrentPage === totalPages}
+                          title="Halaman Selanjutnya"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={validCurrentPage === totalPages}
+                          title="Halaman Terakhir"
+                        >
+                          <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
+                  )}
+                </div>
 
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage(1)}
-                        disabled={validCurrentPage === 1}
-                        title="Halaman Pertama"
-                      >
-                        <ChevronsLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={validCurrentPage === 1}
-                        title="Halaman Sebelumnya"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-
-                      <span className="px-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Halaman {validCurrentPage} dari {totalPages}
-                      </span>
-
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                        disabled={validCurrentPage === totalPages}
-                        title="Halaman Selanjutnya"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={validCurrentPage === totalPages}
-                        title="Halaman Terakhir"
-                      >
-                        <ChevronsRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {/* 2. Print View (All data, no pagination) */}
+                <div className="hidden print:block w-full">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-semibold">Nomor PKS</TableHead>
+                        <TableHead className="font-semibold">ATM</TableHead>
+                        <TableHead className="font-semibold">Lokasi ATM</TableHead>
+                        <TableHead className="font-semibold">Cabang</TableHead>
+                        <TableHead className="font-semibold">Nilai Sewa</TableHead>
+                        <TableHead className="font-semibold">Mulai</TableHead>
+                        <TableHead className="font-semibold">Berakhir</TableHead>
+                        <TableHead className="font-semibold">Masa Sewa</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRentals.map((item) => (
+                        <TableRow key={`print-${item.id}`} className="border-b border-slate-200">
+                          <TableCell className="font-semibold">{item.pks?.nomorPks || '-'}</TableCell>
+                          <TableCell className="font-bold">{item.pks?.atm?.kodeAtm || 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{item.pks?.atm?.lokasi || '-'}</TableCell>
+                          <TableCell>{item.pks?.atm?.cabangPengelola || '-'}</TableCell>
+                          <TableCell className="font-bold">{formatRupiah(item.nilaiSewa)}</TableCell>
+                          <TableCell>{formatTanggal(item.tglMulai)}</TableCell>
+                          <TableCell>{formatTanggal(item.tglBerakhir)}</TableCell>
+                          <TableCell>{item.masaSewa}</TableCell>
+                          <TableCell>
+                            <span className="font-semibold uppercase">{STATUS_KONTRAK_LABEL[item.status || 'aktif']}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 
                 {/* Print only Summary & Signature fields */}
                 <div className="hidden print:flex justify-between items-center mt-12 px-6 pt-6 border-t border-slate-200">
@@ -426,10 +480,9 @@ export default function ReportsPage() {
                     <p className="font-bold">Total Nilai Sewa Rekapitulasi: </p>
                     <p className="text-lg font-bold text-emerald-800 mt-1">{formatRupiah(totalNilaiSewaFiltered)}</p>
                   </div>
-                  <div className="text-center text-sm w-56">
+                  <div className="text-center text-sm w-56 text-black">
                     <p>Mengetahui,</p>
-                    <p className="font-semibold mt-16">( ___________________________ )</p>
-                    <p className="text-xs text-slate-500 mt-1">Supervisi ATM BNI</p>
+                    <p className="font-bold mt-16 tracking-widest">___________________________</p>
                   </div>
                 </div>
               </div>
